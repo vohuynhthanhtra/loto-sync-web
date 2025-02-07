@@ -76,7 +76,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: nhóm các nút game và nút TÔI KINH cùng với icon tắt tiếng */
+    /* Button container: nhóm các nút game và nút TÔI KINH */
     .button-container {
       display: flex;
       justify-content: center;
@@ -106,21 +106,23 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Icon tắt/bật âm: được đặt bên cạnh nút TÔI KINH, làm lớn thật to */
+    /* Icon tắt/bật âm: được đặt theo tọa độ X:1695px, Y:508px, với kích thước lớn */
     #muteBtn {
-      font-size: 32px;
-      padding: 10px 20px;
-      margin-left: 10px;
+      position: absolute;
+      left: 1695px;
+      top: 508px;
+      font-size: 48px;
+      padding: 20px 30px;
       cursor: pointer;
       border: none;
       border-radius: 5px;
       background-color: #007bff;
       color: white;
+      z-index: 10000; /* Đảm bảo nằm trên cùng */
     }
     #muteBtn:hover {
       background-color: #0056b3;
     }
-    /* Không còn menu lựa chọn giọng nữa */
     /* Hiển thị số hiện tại */
     #result {
       margin-top: 30px;
@@ -292,6 +294,7 @@
       
       // Hiển thị thông điệp chiến thắng với tên user
       let playerName = localStorage.getItem("playerName") || "Ẩn danh";
+      // Lưu ý: Nếu người dùng bấm "TÔI KINH XẠO TIẾP THÔI", hàm này sẽ không được gọi.
       document.getElementById("winnerContainer").innerHTML = `<h2>${playerName} CHIẾN THẮNG</h2>`;
     }
 
@@ -318,7 +321,7 @@
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
       let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Ưu tiên chọn giọng có chứa "google" và "nam" hoặc "male"
+      // Ưu tiên chọn giọng có chứa "google" và ("nam" hoặc "male")
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
         if (lowerName.includes("google") && (lowerName.includes("nam") || lowerName.includes("male"))) {
@@ -335,11 +338,10 @@
       return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng: sử dụng nút với icon loa (với icon sẽ thay đổi)
+    // Hàm tắt/bật tiếng: sử dụng nút có icon loa
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
-      // Nếu bị tắt tiếng (isMuted true) hiển thị icon "🔊", nếu không hiển thị "🔇"
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
@@ -484,13 +486,11 @@
       <div class="group-btn">
         <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
         <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
-        <!-- "TÔI KINH XẠO TIẾP THÔI" chỉ gọi startRandomizing() mà không hiển thị chiến thắng -->
         <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
       </div>
       <div class="stop-btn-container">
-        <!-- Khi bấm "TÔI KINH", hàm stopRandomizing() sẽ hiển thị thông điệp chiến thắng -->
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <!-- Icon tắt/bật âm được đặt ngay bên cạnh -->
+        <!-- Icon tắt/bật âm được đặt ngay bên cạnh nút TÔI KINH -->
         <button id="muteBtn" onclick="toggleMute()">🔇</button>
       </div>
     </div>
