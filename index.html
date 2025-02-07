@@ -10,35 +10,7 @@
       padding: 0;
       background-color: #f7f7f7;
     }
-    /* Left corner: Danh sách người chơi */
-    #playerListContainer {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      width: 200px;
-      background-color: #fff;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    #playerListContainer h3 {
-      margin: 0 0 10px 0;
-      font-size: 18px;
-      color: #333;
-    }
-    #playerList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    #playerList li {
-      font-size: 16px;
-      padding: 5px;
-      border-bottom: 1px solid #eee;
-    }
-    /* Right corner: Thời gian */
+    /* Right corner: Time setting */
     #timeSetting {
       position: fixed;
       top: 10px;
@@ -67,24 +39,12 @@
     /* Center content */
     .container {
       text-align: center;
-      margin-top: 100px; /* leave space for fixed corners */
+      margin-top: 100px; /* leave space for fixed corner */
     }
     h1 {
       color: #333;
       font-size: 48px;
       margin-bottom: 20px;
-    }
-    /* Player name input section */
-    #playerNameSection {
-      margin-bottom: 20px;
-    }
-    #playerNameSection input {
-      font-size: 18px;
-      padding: 5px;
-    }
-    #playerNameSection button {
-      font-size: 18px;
-      padding: 5px 10px;
     }
     /* Main control buttons */
     button.main-btn {
@@ -111,13 +71,13 @@
       font-size: 24px;
       color: #555;
     }
-    /* History grid: 5 số mỗi dòng */
+    /* History grid: 10 numbers per row */
     #history {
       margin-top: 30px;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(10, 1fr);
       gap: 10px;
-      max-width: 600px;
+      max-width: 1200px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -230,15 +190,6 @@
       document.getElementById("countdown").innerText = "";
     }
 
-    // Hàm lưu tên người chơi vào Firebase (node 'players')
-    function savePlayerName() {
-      const name = document.getElementById("playerNameInput").value.trim();
-      if (name !== "") {
-        database.ref('players').push({ name: name, timestamp: Date.now() });
-        document.getElementById("playerNameInput").value = "";
-      }
-    }
-
     // Hàm lưu thiết lập thời gian: cập nhật Firebase (node 'timeSetting')
     function saveTimeSetting() {
       const timeVal = parseInt(document.getElementById("timeInput").value);
@@ -249,7 +200,7 @@
 
     // Firebase listeners: không auto-run random số khi trang mở
     window.onload = function() {
-      // Lắng nghe số hiện tại
+      // Lắng nghe thay đổi của số hiện tại
       const resultElement = document.getElementById("result");
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -260,7 +211,7 @@
         }
       });
 
-      // Lắng nghe lịch sử các số đã ra
+      // Lắng nghe thay đổi của lịch sử các số đã ra
       database.ref('lotoHistory').on('value', (snapshot) => {
         const historyData = snapshot.val();
         let html = "";
@@ -280,20 +231,6 @@
         document.getElementById("history").innerHTML = html;
       });
 
-      // Lắng nghe danh sách người chơi
-      database.ref('players').on('value', (snapshot) => {
-        const playersData = snapshot.val();
-        let html = "";
-        if (playersData) {
-          const keys = Object.keys(playersData);
-          keys.sort((a, b) => playersData[a].timestamp - playersData[b].timestamp);
-          keys.forEach((key) => {
-            html += `<li>${playersData[key].name}</li>`;
-          });
-        }
-        document.getElementById("playerList").innerHTML = html;
-      });
-
       // Lắng nghe thiết lập thời gian
       database.ref('timeSetting').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -306,12 +243,6 @@
   </script>
 </head>
 <body>
-  <!-- Left corner: Danh sách người chơi -->
-  <div id="playerListContainer">
-    <h3>Danh sách người chơi</h3>
-    <ul id="playerList"></ul>
-  </div>
-
   <!-- Right corner: Time setting -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
@@ -323,11 +254,6 @@
   <!-- Center content -->
   <div class="container">
     <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
-    <!-- Nhập tên người chơi -->
-    <div id="playerNameSection">
-      <input type="text" id="playerNameInput" placeholder="Nhập tên, ví dụ: Thầy Toàn">
-      <button onclick="savePlayerName()">Lưu tên</button>
-    </div>
     <!-- Các nút điều khiển game -->
     <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
     <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
