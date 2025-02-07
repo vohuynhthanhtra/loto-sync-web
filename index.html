@@ -39,12 +39,12 @@
       padding: 5px;
       border-bottom: 1px solid #eee;
     }
-    /* Right corner (bottom right): Time setting */
+    /* Right corner (bottom right): Time setting & Voice selection */
     #timeSetting {
       position: fixed;
       bottom: 10px;
       right: 10px;
-      width: 200px;
+      width: 220px;
       background-color: #fff;
       padding: 10px;
       border: 1px solid #ccc;
@@ -60,6 +60,12 @@
       width: 60px;
       font-size: 16px;
       padding: 5px;
+    }
+    #timeSetting select {
+      width: 100%;
+      font-size: 14px;
+      padding: 5px;
+      margin: 5px 0;
     }
     #timeSetting button {
       font-size: 14px;
@@ -106,7 +112,7 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Chọn giọng và nút tắt tiếng được đặt bên cạnh nút "TÔI KINH" */
+    /* Chọn giọng và nút tắt tiếng: đặt bên cạnh nút TÔI KINH */
     #voiceSelect {
       font-size: 16px;
       padding: 5px;
@@ -135,6 +141,22 @@
       margin-top: 20px;
       font-size: 24px;
       color: #555;
+    }
+    /* Winner container: hiển thị danh sách người chiến thắng */
+    #winnerContainer {
+      margin-top: 20px;
+      text-align: center;
+    }
+    #winnerContainer h2 {
+      font-size: 28px;
+      color: #333;
+    }
+    #winnerList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 20px;
+      color: #007bff;
     }
     /* History grid: 10 numbers per row */
     #history {
@@ -237,7 +259,7 @@
     let randomInterval = null;
     let countdownInterval = null;
     let countdownTime = 4; // mặc định 4 giây
-    let isMuted = false; // trạng thái âm thanh, ban đầu không tắt
+    let isMuted = false;   // trạng thái âm, ban đầu không tắt tiếng
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
@@ -247,11 +269,11 @@
     // Hàm cập nhật số mới: cập nhật số hiện tại, thêm vào lịch sử, reset countdown
     function updateRandomNumber() {
       const number = generateRandomNumber();
-      // Cập nhật số hiện tại
+      // Cập nhật số hiện tại vào Firebase
       database.ref('lotoResult').set({ result: number });
       // Thêm số vào lịch sử
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Reset countdown từ ô thời gian (nếu hợp lệ)
+      // Reset countdown dựa trên giá trị ô thời gian (nếu hợp lệ)
       countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
@@ -274,6 +296,7 @@
     }
 
     // Hàm dừng quá trình random số và countdown
+    // Khi người dùng bấm "TÔI KINH", thêm tên user vào danh sách người chiến thắng
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -284,6 +307,10 @@
         countdownInterval = null;
       }
       document.getElementById("countdown").innerText = "";
+      
+      // Thêm tên người dùng vào danh sách người chiến thắng
+      let playerName = localStorage.getItem("playerName") || "Ẩn danh";
+      database.ref('winners').push({ name: playerName, timestamp: Date.now() });
     }
 
     // Hàm reset trò chơi: dừng random, xóa số hiện tại và lịch sử
@@ -305,7 +332,7 @@
 
     // --- Text-to-Speech & Voice selection ---
 
-    // Hàm hiển thị danh sách giọng nói và chọn giọng mặc định cho tiếng Việt (nam nếu có)
+    // Hàm hiển thị danh sách giọng nói và chọn mặc định cho tiếng Việt (nam nếu có)
     function populateVoiceList() {
       let voices = speechSynthesis.getVoices();
       let voiceSelect = document.getElementById("voiceSelect");
@@ -313,11 +340,11 @@
       voiceSelect.innerHTML = "";
       let defaultSet = false;
       voices.forEach(voice => {
-        if (voice.lang === "vi-VN") {  // chỉ lấy giọng tiếng Việt
+        if (voice.lang === "vi-VN") {  // Lấy giọng tiếng Việt
           let option = document.createElement("option");
           option.textContent = voice.name + " (" + voice.lang + ")";
           option.value = voice.voiceURI;
-          // Nếu tên chứa "Google" (thường là giọng nam của Google), đặt làm mặc định
+          // Nếu có giọng chứa "Google" (thường là giọng nam), đặt làm mặc định
           if (!defaultSet && voice.name.toLowerCase().includes("google")) {
             option.selected = true;
             defaultSet = true;
@@ -325,7 +352,7 @@
           voiceSelect.appendChild(option);
         }
       });
-      // Nếu không có giọng nào chứa "google" mà vẫn có giọng tiếng Việt, chọn giọng đầu tiên
+      // Nếu không có giọng nào chứa "google", chọn giọng đầu tiên có sẵn
       if (!defaultSet && voiceSelect.options.length > 0) {
         voiceSelect.options[0].selected = true;
       }
@@ -377,9 +404,9 @@
       }
     }
 
-    // --- Firebase listeners & Text-to-Speech ---
+    // --- Firebase listeners & Text-to-Speech & Winner list ---
     window.onload = function() {
-      // Kiểm tra tên người dùng (nếu chưa lưu hoặc đã qua 1 phút, hiển thị modal)
+      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã quá 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
       var storedTimestamp = localStorage.getItem("playerNameTimestamp");
       if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
@@ -420,7 +447,7 @@
         document.getElementById("history").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chơi (loại bỏ tên "toan")
+      // Lắng nghe thay đổi của danh sách người chơi và loại bỏ tên "toan"
       database.ref('players').on('value', (snapshot) => {
         const playersData = snapshot.val();
         let html = "";
@@ -445,6 +472,20 @@
         }
       });
 
+      // Lắng nghe danh sách người chiến thắng (winners)
+      database.ref('winners').on('value', (snapshot) => {
+        const winnersData = snapshot.val();
+        let html = "";
+        if (winnersData) {
+          const keys = Object.keys(winnersData);
+          keys.sort((a, b) => winnersData[a].timestamp - winnersData[b].timestamp);
+          keys.forEach((key) => {
+            html += `<li>${winnersData[key].name}</li>`;
+          });
+        }
+        document.getElementById("winnerList").innerHTML = html;
+      });
+
       // Gọi hàm để liệt kê giọng nói có sẵn
       populateVoiceList();
     }
@@ -457,7 +498,7 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting -->
+  <!-- Right corner (bottom right): Time setting & Voice selection -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
@@ -486,6 +527,11 @@
     <div id="result">Chưa có số</div>
     <!-- Hiển thị countdown -->
     <div id="countdown"></div>
+    <!-- Winner container -->
+    <div id="winnerContainer">
+      <h2>Tên user đã chiến thắng</h2>
+      <ul id="winnerList"></ul>
+    </div>
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
     <div id="history"></div>
