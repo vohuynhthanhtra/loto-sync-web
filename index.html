@@ -76,7 +76,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: nhóm các nút game và nút TÔI KINH cùng menu giọng & nút tắt âm */
+    /* Button container: nhóm các nút game và nút TÔI KINH cùng với icon tắt tiếng */
     .button-container {
       display: flex;
       justify-content: center;
@@ -106,15 +106,10 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Menu lựa chọn giọng & nút tắt/bật âm: đặt ngay bên cạnh nút TÔI KINH */
-    #voiceMenu {
-      font-size: 16px;
-      padding: 5px;
-      margin-left: 10px;
-    }
+    /* Icon tắt/bật âm: được đặt bên cạnh nút TÔI KINH, làm lớn thật to */
     #muteBtn {
-      font-size: 20px;
-      padding: 5px 10px;
+      font-size: 32px;
+      padding: 10px 20px;
       margin-left: 10px;
       cursor: pointer;
       border: none;
@@ -125,6 +120,8 @@
     #muteBtn:hover {
       background-color: #0056b3;
     }
+    /* Không còn menu lựa chọn giọng nữa */
+    /* Hiển thị số hiện tại */
     #result {
       margin-top: 30px;
       font-size: 64px;
@@ -263,7 +260,7 @@
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số (chỉ khi người dùng nhấn nút)
+    // Hàm bắt đầu random số (chỉ khi người dùng nhấn nút "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
     function startRandomizing() {
       if (!randomInterval) {
         updateRandomNumber(); // cập nhật ngay lập tức
@@ -317,32 +314,18 @@
       }
     }
 
-    // --- Text-to-Speech: Sử dụng giọng nữ tiếng Việt (Google, nếu có) hoặc giọng nam nếu được chọn ---
-    function getDefaultFemaleVoice() {
-      let voices = speechSynthesis.getVoices();
-      let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Ưu tiên chọn giọng có chứa "google" và từ "nữ" hoặc "female"
-      for (let voice of viVoices) {
-        let lowerName = voice.name.toLowerCase();
-        if (lowerName.includes("google") && (lowerName.includes("nữ") || lowerName.includes("female"))) {
-          return voice;
-        }
-      }
-      // Nếu không có, ưu tiên chọn giọng có từ "nữ" hoặc "female"
-      for (let voice of viVoices) {
-        let lowerName = voice.name.toLowerCase();
-        if (lowerName.includes("nữ") || lowerName.includes("female")) {
-          return voice;
-        }
-      }
-      // Nếu không tìm thấy gì, trả về giọng đầu tiên
-      return viVoices[0] || null;
-    }
-
+    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (Google, nếu có) ---
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
       let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Ưu tiên chọn giọng có từ "nam" hoặc "male"
+      // Ưu tiên chọn giọng có chứa "google" và "nam" hoặc "male"
+      for (let voice of viVoices) {
+        let lowerName = voice.name.toLowerCase();
+        if (lowerName.includes("google") && (lowerName.includes("nam") || lowerName.includes("male"))) {
+          return voice;
+        }
+      }
+      // Nếu không, ưu tiên chọn giọng có từ "nam" hoặc "male"
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
         if (lowerName.includes("nam") || lowerName.includes("male")) {
@@ -352,18 +335,18 @@
       return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng: sử dụng nút có icon loa và menu lựa chọn giọng
+    // Hàm tắt/bật tiếng: sử dụng nút với icon loa (với icon sẽ thay đổi)
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
+      // Nếu bị tắt tiếng (isMuted true) hiển thị icon "🔊", nếu không hiển thị "🔇"
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng dựa trên lựa chọn trong menu "voiceMenu"
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng luôn giọng nam
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
-        let voiceChoice = document.getElementById("voiceMenu").value; // "female" hoặc "male"
-        let voice = (voiceChoice === "male") ? getDefaultMaleVoice() : getDefaultFemaleVoice();
+        let voice = getDefaultMaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
         utterance.rate = 1;
         utterance.pitch = 1;
@@ -393,7 +376,7 @@
       }
     }
 
-    // --- Firebase listeners, TTS & Winner display ---
+    // --- Firebase listeners & TTS & Winner display ---
     window.onload = function() {
       // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
@@ -485,18 +468,12 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting, menu giọng & nút tắt tiếng -->
+  <!-- Right corner (bottom right): Time setting -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
     <br>
     <button onclick="saveTimeSetting()">Lưu</button>
-    <br><br>
-    <select id="voiceMenu">
-      <option value="female" selected>Giọng Nữ</option>
-      <option value="male">Giọng Nam</option>
-    </select>
-    <button id="muteBtn" onclick="toggleMute()">🔇</button>
   </div>
 
   <!-- Center content -->
@@ -507,10 +484,14 @@
       <div class="group-btn">
         <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
         <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
+        <!-- "TÔI KINH XẠO TIẾP THÔI" chỉ gọi startRandomizing() mà không hiển thị chiến thắng -->
         <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
       </div>
       <div class="stop-btn-container">
+        <!-- Khi bấm "TÔI KINH", hàm stopRandomizing() sẽ hiển thị thông điệp chiến thắng -->
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
+        <!-- Icon tắt/bật âm được đặt ngay bên cạnh -->
+        <button id="muteBtn" onclick="toggleMute()">🔇</button>
       </div>
     </div>
     <!-- Hiển thị số hiện tại -->
