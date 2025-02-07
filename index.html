@@ -76,8 +76,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: chứa tất cả các nút điều khiển.
-       Icon tắt/bật âm sẽ được đặt bên trái nút “CHƠI VÁN MỚI”. */
+    /* Button container: chứa tất cả các nút điều khiển */
     .button-container {
       display: flex;
       justify-content: center;
@@ -85,18 +84,10 @@
       gap: 20px;
       margin-top: 20px;
     }
-    /* Đặt icon tắt/bật âm (muteBtn) bên trái container button */
-    #muteBtn {
-      font-size: 32px;  /* làm to icon */
+    /* Đặt icon tắt/bật âm bên trái nút "CHƠI VÁN MỚI" */
+    .button-container > button#muteBtn {
+      font-size: 32px;  /* Kích thước lớn */
       padding: 10px 20px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background-color: #007bff;
-      color: white;
-    }
-    #muteBtn:hover {
-      background-color: #0056b3;
     }
     /* Main control buttons */
     button.main-btn {
@@ -254,7 +245,7 @@
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số (chỉ khi người dùng nhấn nút "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
+    // Hàm bắt đầu random số (chỉ khi người dùng nhấn "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
     function startRandomizing() {
       if (!randomInterval) {
         updateRandomNumber(); // cập nhật ngay lập tức
@@ -272,7 +263,7 @@
     }
 
     // Hàm dừng quá trình random số và countdown
-    // Khi người dùng bấm "TÔI KINH", hiển thị thông điệp chiến thắng với tên user
+    // Khi người dùng bấm "TÔI KINH", cập nhật Firebase winners để tất cả các user đều thấy
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -284,9 +275,9 @@
       }
       document.getElementById("countdown").innerText = "";
       
-      // Hiển thị thông điệp chiến thắng với tên user
       let playerName = localStorage.getItem("playerName") || "Ẩn danh";
-      document.getElementById("winnerContainer").innerHTML = `<h2>${playerName} CHIẾN THẮNG</h2>`;
+      // Cập nhật Firebase winners để mọi user khác thấy thông điệp chiến thắng
+      database.ref('winners').push({ name: playerName, timestamp: Date.now() });
     }
 
     // Hàm reset trò chơi: dừng random, xóa số hiện tại, lịch sử và thông điệp chiến thắng
@@ -311,9 +302,10 @@
       }
     }
 
-    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (chỉ tiếng Việt) ---
+    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (Google, nếu có) ---
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
+      // Lọc ra các giọng có lang bằng "vi-vn" (chuyển về chữ thường)
       let viVoices = voices.filter(v => v.lang.toLowerCase() === "vi-vn");
       // Ưu tiên chọn giọng có chứa "google" và ("nam" hoặc "male")
       for (let voice of viVoices) {
@@ -336,7 +328,6 @@
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
-      // Nếu bị tắt tiếng, hiển thị icon "🔊", nếu không hiển thị "🔇"
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
@@ -345,7 +336,7 @@
       if ('speechSynthesis' in window && !isMuted) {
         let voice = getDefaultMaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
-        // Bắt buộc đặt ngôn ngữ là tiếng Việt
+        // Ép ngôn ngữ là tiếng Việt
         utterance.lang = "vi-VN";
         utterance.rate = 1;
         utterance.pitch = 1;
@@ -434,7 +425,7 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chiến thắng (Firebase winners nếu có)
+      // Lắng nghe thay đổi của danh sách người chiến thắng (Firebase winners)
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
