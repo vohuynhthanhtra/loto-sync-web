@@ -2,21 +2,33 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Chơi Loto Đồng Bộ</title>
+  <title>BHR LÔTÔ</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       margin: 50px;
+      background-color: #f7f7f7;
+    }
+    h1 {
+      color: #333;
     }
     button {
-      font-size: 20px;
+      font-size: 18px;
       padding: 10px 20px;
+      margin: 10px;
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+    }
+    button:hover {
+      background-color: #0056b3;
     }
     #result {
-      margin-top: 20px;
-      font-size: 24px;
+      margin-top: 30px;
+      font-size: 36px;
       color: #333;
     }
   </style>
@@ -24,57 +36,74 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // Cấu hình Firebase (thay thế các giá trị dưới đây bằng cấu hình của bạn)
+    // Cấu hình Firebase đã được cập nhật
     const firebaseConfig = {
       apiKey: "AIzaSyCLeD7tgGwULz5XA4Hcb-oaenu7s8EOnqM",
       authDomain: "lotosyncgame.firebaseapp.com",
       databaseURL: "https://lotosyncgame-default-rtdb.firebaseio.com",
       projectId: "lotosyncgame",
-      storageBucket: "https://lotosyncgame-default-rtdb.firebaseio.com",
+      storageBucket: "lotosyncgame.firebasestorage.app",
       messagingSenderId: "139995238224",
-      appId: "G-4PH1PE7HXS"
+      appId: "1:139995238224:web:cecfa3b242f9bc0b856655",
+      measurementId: "G-4PH1PE7HXS"
     };
 
     // Khởi tạo Firebase
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Hàm sinh ra 5 số loto ngẫu nhiên trong khoảng từ 1 đến 90
-    function generateLotoNumbers() {
-      const numbers = new Set();
-      while (numbers.size < 5) {
-        const num = Math.floor(Math.random() * 90) + 1;
-        numbers.add(num);
+    // Biến lưu interval (để có thể dừng và tiếp tục)
+    let randomInterval = null;
+
+    // Hàm sinh 1 số ngẫu nhiên từ 1 đến 90
+    function generateRandomNumber() {
+      return Math.floor(Math.random() * 90) + 1;
+    }
+
+    // Hàm cập nhật Firebase với số mới
+    function updateRandomNumber() {
+      const number = generateRandomNumber();
+      // Cập nhật vào node 'lotoResult' trong Firebase
+      database.ref('lotoResult').set({ result: number });
+    }
+
+    // Hàm bắt đầu random số (thiết lập interval mỗi 4 giây)
+    function startRandomizing() {
+      // Nếu chưa có interval nào đang chạy thì thiết lập mới
+      if (!randomInterval) {
+        updateRandomNumber(); // Cập nhật ngay lập tức
+        randomInterval = setInterval(updateRandomNumber, 4000); // 4000ms = 4 giây
       }
-      return Array.from(numbers).sort((a, b) => a - b);
     }
 
-    // Khi nhấn nút, sinh số và cập nhật lên Firebase
-    function randomAndUpdate() {
-      const lotoNumbers = generateLotoNumbers();
-      const resultStr = lotoNumbers.join(", ");
-      // Ghi dữ liệu lên nút 'lotoResult'
-      database.ref('lotoResult').set({ result: resultStr });
+    // Hàm dừng random số (xóa interval)
+    function stopRandomizing() {
+      if (randomInterval) {
+        clearInterval(randomInterval);
+        randomInterval = null;
+      }
     }
 
-    // Khi trang được tải, lắng nghe thay đổi dữ liệu trên nút 'lotoResult'
+    // Lắng nghe thay đổi từ Firebase và cập nhật giao diện
     window.onload = function() {
       const resultElement = document.getElementById("result");
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
-        if (data && data.result) {
-          resultElement.innerText = "Kết quả loto: " + data.result;
+        if (data && data.result !== undefined) {
+          resultElement.innerText = "Số: " + data.result;
         } else {
-          resultElement.innerText = "Chưa có kết quả.";
+          resultElement.innerText = "Chưa có số";
         }
       });
     }
   </script>
 </head>
 <body>
-  <h1>Chơi Loto Đồng Bộ</h1>
-  <p>Mỗi khi ai đó nhấn nút “Random Số”, kết quả sẽ được cập nhật cho tất cả người chơi.</p>
-  <button onclick="randomAndUpdate()">Random Số</button>
-  <p id="result">Chưa có kết quả.</p>
+  <h1>BHR LÔTÔ</h1>
+  <!-- Các nút điều khiển -->
+  <button onclick="startRandomizing()">BẮT ĐẦU</button>
+  <button onclick="stopRandomizing()">TÔI KINH</button>
+  <button onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
+  <p id="result">Chưa có số</p>
 </body>
 </html>
