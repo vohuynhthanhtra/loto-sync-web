@@ -84,12 +84,12 @@
       gap: 20px;
       margin-top: 20px;
     }
-    /* Ví dụ đặt icon âm thanh bên trái nút "CHƠI VÁN MỚI" trong container này */
+    /* Ví dụ đặt icon âm thanh bên trái nút "CHƠI VÁN MỚI" */
     .button-container > button#muteBtn {
-      /* Nếu bạn muốn định vị theo tọa độ cố định, bạn có thể sử dụng position: absolute, 
-         nhưng ở đây chúng ta sẽ đặt trong layout linh hoạt */
-      font-size: 22px;  /* Cùng kích thước với nút TÔI KINH */
-      padding: 15px 25px;
+      font-size: 32px;
+      padding: 10px 20px;
+      /* Nếu muốn định vị cố định theo tọa độ, bạn có thể sử dụng position: absolute; 
+         tuy nhiên, ở đây ta giữ layout linh hoạt */
     }
     /* Main control buttons */
     button.main-btn {
@@ -326,15 +326,17 @@
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
-      // Nếu tắt tiếng (isMuted true) hiển thị icon "🔊", nếu không hiển thị "🔇"
+      // Nếu bị tắt tiếng, hiển thị icon "🔊", nếu không hiển thị "🔇"
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng nam tiếng Việt
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng luôn giọng nam tiếng Việt
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voice = getDefaultMaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
+        // Bắt buộc đặt ngôn ngữ là tiếng Việt
+        utterance.lang = "vi-VN";
         utterance.rate = 1;
         utterance.pitch = 1;
         if (voice) {
@@ -422,8 +424,7 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chiến thắng
-      // Chỉ hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH"
+      // Lắng nghe thay đổi của danh sách người chiến thắng (nếu có, nhưng chỉ hiển thị khi bấm "TÔI KINH")
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
@@ -466,13 +467,17 @@
   <!-- Center content -->
   <div class="container">
     <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
-    <!-- Button container: đặt icon âm thanh bên trái nút CHƠI VÁN MỚI -->
+    <!-- Button container: đặt icon âm thanh bên trái nút "CHƠI VÁN MỚI" -->
     <div class="button-container">
       <button id="muteBtn" onclick="toggleMute()">🔇</button>
-      <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
-      <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
-      <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
-      <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
+      <div class="group-btn">
+        <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
+        <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
+        <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
+      </div>
+      <div class="stop-btn-container">
+        <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
+      </div>
     </div>
     <!-- Hiển thị số hiện tại -->
     <div id="result">Chưa có số</div>
