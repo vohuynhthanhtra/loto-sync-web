@@ -6,16 +6,88 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 50px;
+      margin: 0;
+      padding: 0;
       background-color: #f7f7f7;
+    }
+    /* Left corner: Danh sách người chơi */
+    #playerListContainer {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 200px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #playerListContainer h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    #playerList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playerList li {
+      font-size: 16px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    /* Right corner: Thời gian */
+    #timeSetting {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 200px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #timeSetting h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    #timeSetting input {
+      width: 60px;
+      font-size: 16px;
+      padding: 5px;
+    }
+    #timeSetting button {
+      font-size: 14px;
+      padding: 5px 10px;
+      margin-top: 5px;
+    }
+    /* Center content */
+    .container {
+      text-align: center;
+      margin-top: 100px; /* leave space for fixed corners */
     }
     h1 {
       color: #333;
       font-size: 48px;
       margin-bottom: 20px;
     }
-    button {
+    /* Player name input section */
+    #playerNameSection {
+      margin-bottom: 20px;
+    }
+    #playerNameSection input {
+      font-size: 18px;
+      padding: 5px;
+    }
+    #playerNameSection button {
+      font-size: 18px;
+      padding: 5px 10px;
+    }
+    /* Main control buttons */
+    button.main-btn {
       font-size: 18px;
       padding: 10px 20px;
       margin: 10px;
@@ -25,7 +97,7 @@
       background-color: #007bff;
       color: white;
     }
-    button:hover {
+    button.main-btn:hover {
       background-color: #0056b3;
     }
     #result {
@@ -39,7 +111,7 @@
       font-size: 24px;
       color: #555;
     }
-    /* CSS Grid: hiển thị 5 số mỗi dòng */
+    /* History grid: 5 số mỗi dòng */
     #history {
       margin-top: 30px;
       display: grid;
@@ -58,13 +130,11 @@
       text-align: center;
       position: relative;
     }
-    /* Số thứ tự hiển thị bên dưới (nhỏ xíu) */
     .order-number {
       font-size: 14px;
       color: #777;
       margin-top: 5px;
     }
-    /* Nhãn "MỚI" hiển thị trên đầu số, chỉ dành cho số mới nhất */
     .new-label {
       position: absolute;
       top: -10px;
@@ -73,7 +143,6 @@
       background-color: white;
       color: red;
       font-size: 14px;
-      font-weight: normal;
       padding: 2px 4px;
       border: 1px solid red;
       border-radius: 3px;
@@ -83,7 +152,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // Cấu hình Firebase (đã được cập nhật)
+    // Cấu hình Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCLeD7tgGwULz5XA4Hcb-oaenu7s8EOnqM",
       authDomain: "lotosyncgame.firebaseapp.com",
@@ -99,37 +168,35 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Các biến để quản lý interval và countdown
+    // Các biến quản lý quá trình random và countdown
     let randomInterval = null;
     let countdownInterval = null;
-    let countdownTime = 4; // 4 giây
+    let countdownTime = 4; // mặc định 4 giây
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
       return Math.floor(Math.random() * 90) + 1;
     }
 
-    // Hàm cập nhật số mới:
-    // - Cập nhật số hiện tại trên Firebase
-    // - Thêm số vào lịch sử (history) với timestamp
-    // - Reset bộ đếm thời gian
+    // Hàm cập nhật số mới: cập nhật số hiện tại, thêm vào lịch sử, reset countdown
     function updateRandomNumber() {
       const number = generateRandomNumber();
       // Cập nhật số hiện tại
       database.ref('lotoResult').set({ result: number });
       // Thêm số vào lịch sử
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Reset countdown về 4 giây
-      countdownTime = 4;
+      // Lấy thời gian countdown từ ô thời gian (nếu hợp lệ)
+      countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số và hiển thị countdown
+    // Hàm bắt đầu random số (chỉ chạy khi người dùng nhấn nút)
     function startRandomizing() {
-      // Chỉ bắt đầu nếu chưa có quá trình random nào đang chạy
       if (!randomInterval) {
-        updateRandomNumber(); // Cập nhật ngay lập tức
-        randomInterval = setInterval(updateRandomNumber, 4000); // Mỗi 4 giây cập nhật số mới
+        updateRandomNumber(); // cập nhật ngay lập tức
+        // Sử dụng giá trị thời gian từ ô timeInput (tính bằng giây)
+        const intervalTime = (parseInt(document.getElementById("timeInput").value) || 4) * 1000;
+        randomInterval = setInterval(updateRandomNumber, intervalTime);
         // Bắt đầu bộ đếm thời gian
         if (!countdownInterval) {
           countdownInterval = setInterval(() => {
@@ -141,7 +208,7 @@
       }
     }
 
-    // Hàm dừng quá trình random số và bộ đếm thời gian
+    // Hàm dừng quá trình random số và countdown
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -154,22 +221,36 @@
       document.getElementById("countdown").innerText = "";
     }
 
-    // Hàm reset trò chơi (CHƠI VÁN MỚI)
+    // Hàm reset trò chơi: dừng random, xóa số hiện tại và lịch sử
     function newGame() {
-      // Dừng quá trình random và countdown nếu đang chạy
       stopRandomizing();
-      // Xóa dữ liệu lịch sử và số hiện tại trên Firebase
       database.ref('lotoHistory').remove();
       database.ref('lotoResult').remove();
-      // Reset hiển thị giao diện
       document.getElementById("result").innerText = "Chưa có số";
       document.getElementById("countdown").innerText = "";
     }
 
-    // Khi trang được tải, thiết lập lắng nghe các thay đổi từ Firebase
+    // Hàm lưu tên người chơi vào Firebase (node 'players')
+    function savePlayerName() {
+      const name = document.getElementById("playerNameInput").value.trim();
+      if (name !== "") {
+        database.ref('players').push({ name: name, timestamp: Date.now() });
+        document.getElementById("playerNameInput").value = "";
+      }
+    }
+
+    // Hàm lưu thiết lập thời gian: cập nhật Firebase (node 'timeSetting')
+    function saveTimeSetting() {
+      const timeVal = parseInt(document.getElementById("timeInput").value);
+      if (!isNaN(timeVal) && timeVal > 0) {
+        database.ref('timeSetting').set({ value: timeVal });
+      }
+    }
+
+    // Firebase listeners: không auto-run random số khi trang mở
     window.onload = function() {
+      // Lắng nghe số hiện tại
       const resultElement = document.getElementById("result");
-      // Lắng nghe thay đổi của số hiện tại
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.result !== undefined) {
@@ -179,18 +260,15 @@
         }
       });
 
-      // Lắng nghe thay đổi của lịch sử các số đã ra
+      // Lắng nghe lịch sử các số đã ra
       database.ref('lotoHistory').on('value', (snapshot) => {
         const historyData = snapshot.val();
         let html = "";
         if (historyData) {
-          // Lấy các mục và sắp xếp theo timestamp tăng dần
           const keys = Object.keys(historyData);
           keys.sort((a, b) => historyData[a].timestamp - historyData[b].timestamp);
-          // Số thứ tự bắt đầu từ 1
           keys.forEach((key, index) => {
             const order = index + 1;
-            // Xác định ô mới nhất (số vừa đọc) là ô cuối cùng trong danh sách
             const isLatest = (index === keys.length - 1);
             html += `<div class="history-item">
                         ${isLatest ? '<div class="new-label">MỚI</div>' : ''}
@@ -201,23 +279,67 @@
         }
         document.getElementById("history").innerHTML = html;
       });
+
+      // Lắng nghe danh sách người chơi
+      database.ref('players').on('value', (snapshot) => {
+        const playersData = snapshot.val();
+        let html = "";
+        if (playersData) {
+          const keys = Object.keys(playersData);
+          keys.sort((a, b) => playersData[a].timestamp - playersData[b].timestamp);
+          keys.forEach((key) => {
+            html += `<li>${playersData[key].name}</li>`;
+          });
+        }
+        document.getElementById("playerList").innerHTML = html;
+      });
+
+      // Lắng nghe thiết lập thời gian
+      database.ref('timeSetting').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.value) {
+          document.getElementById("timeInput").value = data.value;
+          countdownTime = data.value;
+        }
+      });
     }
   </script>
 </head>
 <body>
-  <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
-  <!-- Các nút điều khiển -->
-  <button onclick="newGame()">CHƠI VÁN MỚI</button>
-  <button onclick="startRandomizing()">BẮT ĐẦU</button>
-  <button onclick="stopRandomizing()">TÔI KINH</button>
-  <button onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
-  <!-- Hiển thị số hiện tại -->
-  <div id="result">Chưa có số</div>
-  <!-- Hiển thị bộ đếm thời gian -->
-  <div id="countdown"></div>
-  <!-- Tiêu đề lịch sử -->
-  <h2>Các số đã đọc</h2>
-  <!-- Lịch sử các số (hiển thị 5 số mỗi dòng nhờ CSS Grid) -->
-  <div id="history"></div>
+  <!-- Left corner: Danh sách người chơi -->
+  <div id="playerListContainer">
+    <h3>Danh sách người chơi</h3>
+    <ul id="playerList"></ul>
+  </div>
+
+  <!-- Right corner: Time setting -->
+  <div id="timeSetting">
+    <h3>Thời gian ra số (giây)</h3>
+    <input type="number" id="timeInput" value="4" min="1">
+    <br>
+    <button onclick="saveTimeSetting()">Lưu</button>
+  </div>
+
+  <!-- Center content -->
+  <div class="container">
+    <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
+    <!-- Nhập tên người chơi -->
+    <div id="playerNameSection">
+      <input type="text" id="playerNameInput" placeholder="Nhập tên, ví dụ: Thầy Toàn">
+      <button onclick="savePlayerName()">Lưu tên</button>
+    </div>
+    <!-- Các nút điều khiển game -->
+    <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
+    <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
+    <button class="main-btn" onclick="stopRandomizing()">TÔI KINH</button>
+    <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
+    <!-- Hiển thị số hiện tại -->
+    <div id="result">Chưa có số</div>
+    <!-- Hiển thị countdown -->
+    <div id="countdown"></div>
+    <!-- Lịch sử các số đã ra -->
+    <h2>Các số đã đọc</h2>
+    <div id="history"></div>
+  </div>
 </body>
 </html>
