@@ -192,45 +192,6 @@
     .modal-content button:hover {
       background-color: #0056b3;
     }
-    /* Chat container: hiển thị ở dưới cùng của trang */
-    #chatContainer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: #fff;
-      border-top: 1px solid #ccc;
-      padding: 10px;
-      box-sizing: border-box;
-    }
-    #chatMessages {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-      background-color: #f9f9f9;
-    }
-    #chatInputContainer {
-      display: flex;
-    }
-    #chatInput {
-      flex: 1;
-      padding: 8px;
-      font-size: 16px;
-    }
-    #chatInputContainer button {
-      padding: 8px 12px;
-      font-size: 16px;
-      background-color: #007bff;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    #chatInputContainer button:hover {
-      background-color: #0056b3;
-    }
   </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -342,40 +303,6 @@
       }
     }
 
-    // Hàm gửi tin nhắn chat
-    function sendChatMessage() {
-      var message = document.getElementById("chatInput").value.trim();
-      if (message !== "") {
-        var playerName = localStorage.getItem("playerName") || "Ẩn danh";
-        database.ref('chatMessages').push({
-          name: playerName,
-          message: message,
-          timestamp: Date.now()
-        });
-        document.getElementById("chatInput").value = "";
-      }
-    }
-
-    // Firebase listener cho chat messages
-    function setupChatListener() {
-      database.ref('chatMessages').on('value', function(snapshot) {
-        var chatMessagesDiv = document.getElementById("chatMessages");
-        var messages = snapshot.val();
-        var html = "";
-        if (messages) {
-          var keys = Object.keys(messages);
-          keys.sort((a, b) => messages[a].timestamp - messages[b].timestamp);
-          keys.forEach(function(key) {
-            var msgData = messages[key];
-            html += "<div><strong>" + msgData.name + ":</strong> " + msgData.message + "</div>";
-          });
-        }
-        chatMessagesDiv.innerHTML = html;
-        // Cuộn xuống cuối khung chat
-        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
-      });
-    }
-
     // Firebase listeners và kiểm tra tên người dùng khi web mở
     window.onload = function() {
       // Kiểm tra nếu tên người dùng đã lưu nhưng nếu đã qua 1 phút thì yêu cầu nhập lại
@@ -442,9 +369,6 @@
           countdownTime = data.value;
         }
       });
-
-      // Thiết lập lắng nghe chat
-      setupChatListener();
     }
   </script>
 </head>
@@ -455,7 +379,7 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right now): Time setting -->
+  <!-- Right corner (bottom right): Time setting -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
@@ -484,15 +408,6 @@
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
     <div id="history"></div>
-  </div>
-
-  <!-- Chat container -->
-  <div id="chatContainer">
-    <div id="chatMessages"></div>
-    <div id="chatInputContainer">
-      <input type="text" id="chatInput" placeholder="Nhập tin nhắn...">
-      <button onclick="sendChatMessage()">Gửi</button>
-    </div>
   </div>
 
   <!-- Modal nhập tên -->
