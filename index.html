@@ -13,6 +13,7 @@
     h1 {
       color: #333;
       font-size: 48px;
+      margin-bottom: 20px;
     }
     button {
       font-size: 18px;
@@ -38,20 +39,22 @@
       font-size: 24px;
       color: #555;
     }
+    /* Sử dụng CSS Grid để hiển thị 5 số mỗi dòng */
     #history {
       margin-top: 30px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
     }
     .history-item {
       background-color: #e0e0e0;
       border: 1px solid #ccc;
-      margin: 5px;
       padding: 10px;
       font-size: 32px;
       font-weight: bold;
-      width: 100px;
       text-align: center;
     }
   </style>
@@ -75,47 +78,49 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Biến lưu các interval
+    // Các biến để quản lý interval và countdown
     let randomInterval = null;
     let countdownInterval = null;
-    let countdownTime = 4; // số giây ban đầu
+    let countdownTime = 4; // 4 giây
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
       return Math.floor(Math.random() * 90) + 1;
     }
 
-    // Hàm cập nhật số mới: update số hiện tại và thêm vào lịch sử
+    // Hàm cập nhật số mới:
+    // - Cập nhật số hiện tại trên Firebase
+    // - Thêm số vào lịch sử (history)
+    // - Reset bộ đếm thời gian
     function updateRandomNumber() {
       const number = generateRandomNumber();
       // Cập nhật số hiện tại
       database.ref('lotoResult').set({ result: number });
-      // Thêm số vào lịch sử (history)
+      // Thêm số vào lịch sử
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Reset bộ đếm thời gian về 4 giây
+      // Reset countdown về 4 giây
       countdownTime = 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số và chạy countdown
+    // Hàm bắt đầu random số và hiển thị countdown
     function startRandomizing() {
+      // Chỉ bắt đầu nếu chưa có quá trình random nào đang chạy
       if (!randomInterval) {
-        updateRandomNumber(); // cập nhật ngay lập tức
-        randomInterval = setInterval(updateRandomNumber, 4000); // mỗi 4 giây update
-        // Bắt đầu countdown
+        updateRandomNumber(); // Cập nhật ngay lập tức
+        randomInterval = setInterval(updateRandomNumber, 4000); // Mỗi 4 giây cập nhật số mới
+        // Bắt đầu bộ đếm thời gian
         if (!countdownInterval) {
           countdownInterval = setInterval(() => {
             countdownTime--;
-            if (countdownTime < 0) {
-              countdownTime = 0; // đảm bảo không âm
-            }
+            if (countdownTime < 0) countdownTime = 0;
             document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
           }, 1000);
         }
       }
     }
 
-    // Hàm dừng random số và countdown
+    // Hàm dừng quá trình random số và bộ đếm thời gian
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -128,10 +133,10 @@
       document.getElementById("countdown").innerText = "";
     }
 
-    // Khi trang được tải, lắng nghe thay đổi từ Firebase
+    // Khi trang được tải, thiết lập lắng nghe các thay đổi từ Firebase
     window.onload = function() {
       const resultElement = document.getElementById("result");
-      // Cập nhật số hiện tại
+      // Lắng nghe thay đổi của số hiện tại
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.result !== undefined) {
@@ -140,12 +145,16 @@
           resultElement.innerText = "Chưa có số";
         }
       });
-      // Cập nhật lịch sử các số đã ra
+
+      // Lắng nghe thay đổi của lịch sử các số đã ra
       database.ref('lotoHistory').on('value', (snapshot) => {
         const historyData = snapshot.val();
         let html = "";
         if (historyData) {
-          Object.keys(historyData).forEach(key => {
+          // Sắp xếp các mục theo timestamp tăng dần
+          const keys = Object.keys(historyData);
+          keys.sort((a, b) => historyData[a].timestamp - historyData[b].timestamp);
+          keys.forEach(key => {
             html += `<div class="history-item">${historyData[key].result}</div>`;
           });
         }
@@ -164,7 +173,7 @@
   <div id="result">Chưa có số</div>
   <!-- Hiển thị bộ đếm thời gian -->
   <div id="countdown"></div>
-  <!-- Lịch sử các số đã ra -->
+  <!-- Hiển thị lịch sử các số đã ra (5 số mỗi dòng nhờ CSS Grid) -->
   <h2>Các số đã đọc</h2>
   <div id="history"></div>
 </body>
