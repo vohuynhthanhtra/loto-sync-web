@@ -88,7 +88,7 @@
       display: flex;
       gap: 10px;
     }
-    /* Main control buttons (cho các nút trong nhóm chung) */
+    /* Main control buttons */
     button.main-btn {
       font-size: 18px;
       padding: 10px 20px;
@@ -106,9 +106,9 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Nút tắt tiếng, đặt bên cạnh nút TÔI KINH */
+    /* Nút tắt/bật âm: hiển thị icon loa, đặt bên cạnh nút TÔI KINH */
     #muteBtn {
-      font-size: 16px;
+      font-size: 20px;
       padding: 5px 10px;
       margin-left: 10px;
       cursor: pointer;
@@ -248,7 +248,7 @@
     let randomInterval = null;
     let countdownInterval = null;
     let countdownTime = 4; // mặc định 4 giây
-    let isMuted = false; // trạng thái âm, ban đầu không tắt
+    let isMuted = false;   // trạng thái âm, ban đầu không tắt
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
@@ -302,11 +302,12 @@
       database.ref('winners').push({ name: playerName, timestamp: Date.now() });
     }
 
-    // Hàm reset trò chơi: dừng random, xóa số hiện tại và lịch sử
+    // Hàm reset trò chơi: dừng random, xóa số hiện tại, lịch sử và danh sách người chiến thắng
     function newGame() {
       stopRandomizing();
       database.ref('lotoHistory').remove();
       database.ref('lotoResult').remove();
+      database.ref('winners').remove();
       document.getElementById("result").innerText = "Chưa có số";
       document.getElementById("countdown").innerText = "";
     }
@@ -322,13 +323,13 @@
     // --- Text-to-Speech: Sử dụng giọng nữ tiếng Việt mặc định ---
     function getDefaultFemaleVoice() {
       let voices = speechSynthesis.getVoices();
-      // Tìm giọng tiếng Việt và ưu tiên giọng có từ "nữ" hoặc "female" (nếu có)
+      // Tìm giọng tiếng Việt có từ "nữ" hoặc "female" trong tên
       for (let voice of voices) {
         if (voice.lang === "vi-VN" && (voice.name.toLowerCase().includes("nữ") || voice.name.toLowerCase().includes("female"))) {
           return voice;
         }
       }
-      // Nếu không tìm thấy, trả về giọng đầu tiên có vi-VN
+      // Nếu không tìm thấy, trả về giọng tiếng Việt đầu tiên
       for (let voice of voices) {
         if (voice.lang === "vi-VN") {
           return voice;
@@ -337,14 +338,14 @@
       return null;
     }
 
-    // Hàm tắt/bật tiếng
+    // Hàm tắt/bật tiếng, hiển thị icon loa
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
-      muteBtn.innerText = isMuted ? "BẬT ÂM" : "TẮT ÂM";
+      muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không tắt tiếng, sử dụng giọng nữ
+    // Hàm đọc số mới bằng TTS nếu không bị tắt tiếng, sử dụng giọng nữ
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voice = getDefaultFemaleVoice();
@@ -377,7 +378,7 @@
 
     // --- Firebase listeners & Text-to-Speech & Winner list ---
     window.onload = function() {
-      // Kiểm tra nếu tên chưa được lưu hoặc đã quá 1 phút thì hiển thị modal
+      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
       var storedTimestamp = localStorage.getItem("playerNameTimestamp");
       if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
@@ -456,6 +457,14 @@
           countdownTime = data.value;
         }
       });
+
+      // Gọi hàm để liệt kê giọng (không hiển thị box, chỉ dùng để TTS)
+      // Các giọng sẽ được lấy tự động
+      // Nếu cần, speechSynthesis.onvoiceschanged sẽ gọi populateVoiceList, nhưng bây giờ ta không dùng UI cho điều đó.
+      // Vì vậy, chỉ cần đảm bảo rằng giọng TTS được lấy qua getDefaultFemaleVoice().
+      // (Nếu chưa có giọng, thì TTS sẽ sử dụng giọng mặc định của trình duyệt.)
+      // Không cần hiển thị bất kỳ box nào.
+      // End of window.onload
     }
   </script>
 </head>
@@ -466,7 +475,7 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting (giờ và nút tắt tiếng) -->
+  <!-- Right corner (bottom right): Time setting -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
@@ -486,14 +495,14 @@
       </div>
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <button id="muteBtn" onclick="toggleMute()">TẮT ÂM</button>
+        <button id="muteBtn" onclick="toggleMute()">🔇</button>
       </div>
     </div>
     <!-- Hiển thị số hiện tại -->
     <div id="result">Chưa có số</div>
     <!-- Hiển thị countdown -->
     <div id="countdown"></div>
-    <!-- Winner container -->
+    <!-- Winner container: chỉ hiển thị khi có người chiến thắng -->
     <div id="winnerContainer">
       <h2>Tên user đã chiến thắng</h2>
       <ul id="winnerList"></ul>
