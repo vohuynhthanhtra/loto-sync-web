@@ -39,7 +39,7 @@
       font-size: 24px;
       color: #555;
     }
-    /* Sử dụng CSS Grid để hiển thị 5 số mỗi dòng */
+    /* CSS Grid: hiển thị 5 số mỗi dòng */
     #history {
       margin-top: 30px;
       display: grid;
@@ -56,6 +56,27 @@
       font-size: 32px;
       font-weight: bold;
       text-align: center;
+      position: relative;
+    }
+    /* Số thứ tự hiển thị bên dưới (nhỏ xíu) */
+    .order-number {
+      font-size: 14px;
+      color: #777;
+      margin-top: 5px;
+    }
+    /* Nhãn "MỚI" hiển thị trên đầu số, chỉ dành cho số mới nhất */
+    .new-label {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: white;
+      color: red;
+      font-size: 14px;
+      font-weight: normal;
+      padding: 2px 4px;
+      border: 1px solid red;
+      border-radius: 3px;
     }
   </style>
   <!-- Firebase SDK -->
@@ -90,7 +111,7 @@
 
     // Hàm cập nhật số mới:
     // - Cập nhật số hiện tại trên Firebase
-    // - Thêm số vào lịch sử (history)
+    // - Thêm số vào lịch sử (history) với timestamp
     // - Reset bộ đếm thời gian
     function updateRandomNumber() {
       const number = generateRandomNumber();
@@ -163,11 +184,19 @@
         const historyData = snapshot.val();
         let html = "";
         if (historyData) {
-          // Sắp xếp các mục theo timestamp tăng dần
+          // Lấy các mục và sắp xếp theo timestamp tăng dần
           const keys = Object.keys(historyData);
           keys.sort((a, b) => historyData[a].timestamp - historyData[b].timestamp);
-          keys.forEach(key => {
-            html += `<div class="history-item">${historyData[key].result}</div>`;
+          // Số thứ tự bắt đầu từ 1
+          keys.forEach((key, index) => {
+            const order = index + 1;
+            // Xác định ô mới nhất (số vừa đọc) là ô cuối cùng trong danh sách
+            const isLatest = (index === keys.length - 1);
+            html += `<div class="history-item">
+                        ${isLatest ? '<div class="new-label">MỚI</div>' : ''}
+                        <div class="drawn-number">${historyData[key].result}</div>
+                        <div class="order-number">${order}</div>
+                     </div>`;
           });
         }
         document.getElementById("history").innerHTML = html;
@@ -186,8 +215,9 @@
   <div id="result">Chưa có số</div>
   <!-- Hiển thị bộ đếm thời gian -->
   <div id="countdown"></div>
-  <!-- Lịch sử các số đã ra (hiển thị 5 số mỗi dòng nhờ CSS Grid) -->
+  <!-- Tiêu đề lịch sử -->
   <h2>Các số đã đọc</h2>
+  <!-- Lịch sử các số (hiển thị 5 số mỗi dòng nhờ CSS Grid) -->
   <div id="history"></div>
 </body>
 </html>
