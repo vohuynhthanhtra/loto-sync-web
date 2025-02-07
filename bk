@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</title>
+  <style>
+    /* Reset & Body */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7f7f7;
+    }
+    /* Left corner (bottom left): Danh sách người chơi */
+    #playerListContainer {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      width: 220px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+    #playerListContainer h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    #playerList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playerList li {
+      font-size: 16px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    /* Right corner (bottom right): Time setting */
+    #timeSetting {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 220px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+    #timeSetting h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    #timeSetting input {
+      width: 60px;
+      font-size: 16px;
+      padding: 5px;
+    }
+    #timeSetting button {
+      font-size: 14px;
+      padding: 5px 10px;
+      margin-top: 5px;
+    }
+    /* Center content */
+    .container {
+      text-align: center;
+      margin-top: 100px; /* Leave space for fixed corners */
+    }
+    h1 {
+      color: #333;
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    /* Button container: chứa tất cả các nút điều khiển */
+    .button-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    /* Đặt icon tắt/bật âm bên trái nút "CHƠI VÁN MỚI" */
+    .button-container > button#muteBtn {
+      font-size: 32px;  /* Kích thước lớn */
+      padding: 10px 20px;
+    }
+    /* Main control buttons */
+    button.main-btn {
+      font-size: 18px;
+      padding: 10px 20px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+    }
+    button.main-btn:hover {
+      background-color: #0056b3;
+    }
+    /* Nút TÔI KINH (stopBtn) được làm to hơn */
+    #stopBtn {
+      font-size: 22px;
+      padding: 15px 25px;
+    }
+    #result {
+      margin-top: 30px;
+      font-size: 64px;
+      color: #333;
+      font-weight: bold;
+    }
+    #countdown {
+      margin-top: 20px;
+      font-size: 24px;
+      color: #555;
+    }
+    /* Winner container: hiển thị thông điệp chiến thắng */
+    #winnerContainer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 28px;
+      color: #007bff;
+    }
+    /* History grid: 10 numbers per row */
+    #history {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .history-item {
+      background-color: #e0e0e0;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 32px;
+      font-weight: bold;
+      text-align: center;
+      position: relative;
+    }
+    .order-number {
+      font-size: 14px;
+      color: #777;
+      margin-top: 5px;
+    }
+    .new-label {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: white;
+      color: red;
+      font-size: 14px;
+      padding: 2px 4px;
+      border: 1px solid red;
+      border-radius: 3px;
+    }
+    /* Modal styles cho nhập tên */
+    .modal {
+      display: block; /* Hiển thị modal khi cần */
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .modal-content input {
+      font-size: 18px;
+      padding: 5px;
+      width: 80%;
+      margin-bottom: 10px;
+    }
+    .modal-content button {
+      font-size: 18px;
+      padding: 5px 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+    }
+    .modal-content button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // Cấu hình Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCLeD7tgGwULz5XA4Hcb-oaenu7s8EOnqM",
+      authDomain: "lotosyncgame.firebaseapp.com",
+      databaseURL: "https://lotosyncgame-default-rtdb.firebaseio.com",
+      projectId: "lotosyncgame",
+      storageBucket: "lotosyncgame.firebasestorage.app",
+      messagingSenderId: "139995238224",
+      appId: "1:139995238224:web:cecfa3b242f9bc0b856655",
+      measurementId: "G-4PH1PE7HXS"
+    };
+
+    // Khởi tạo Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Các biến quản lý quá trình random, countdown và âm thanh
+    let randomInterval = null;
+    let countdownInterval = null;
+    let countdownTime = 4; // mặc định 4 giây
+    let isMuted = false;   // trạng thái âm, ban đầu không tắt
+
+    // Hàm sinh số ngẫu nhiên từ 1 đến 90
+    function generateRandomNumber() {
+      return Math.floor(Math.random() * 90) + 1;
+    }
+
+    // Hàm cập nhật số mới: cập nhật số hiện tại, thêm vào lịch sử, reset countdown
+    function updateRandomNumber() {
+      const number = generateRandomNumber();
+      // Cập nhật số hiện tại vào Firebase
+      database.ref('lotoResult').set({ result: number });
+      // Thêm số vào lịch sử
+      database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
+      // Reset countdown từ giá trị ô thời gian (nếu hợp lệ)
+      countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
+      document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
+    }
+
+    // Hàm bắt đầu random số (chỉ khi người dùng nhấn "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
+    function startRandomizing() {
+      if (!randomInterval) {
+        updateRandomNumber(); // cập nhật ngay lập tức
+        const intervalTime = (parseInt(document.getElementById("timeInput").value) || 4) * 1000;
+        randomInterval = setInterval(updateRandomNumber, intervalTime);
+        // Bắt đầu bộ đếm thời gian
+        if (!countdownInterval) {
+          countdownInterval = setInterval(() => {
+            countdownTime--;
+            if (countdownTime < 0) countdownTime = 0;
+            document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
+          }, 1000);
+        }
+      }
+    }
+
+    // Hàm dừng quá trình random số và countdown
+    // Khi người dùng bấm "TÔI KINH", cập nhật Firebase winners để tất cả các user đều thấy
+    function stopRandomizing() {
+      if (randomInterval) {
+        clearInterval(randomInterval);
+        randomInterval = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      document.getElementById("countdown").innerText = "";
+      
+      let playerName = localStorage.getItem("playerName") || "Ẩn danh";
+      // Cập nhật Firebase winners để mọi user khác thấy thông điệp chiến thắng
+      database.ref('winners').push({ name: playerName, timestamp: Date.now() });
+    }
+
+    // Hàm reset trò chơi: dừng random, xóa số hiện tại, lịch sử và thông điệp chiến thắng
+    function newGame() {
+      // Hủy bất kỳ phát âm TTS nào đang chờ hoặc đang chạy
+      speechSynthesis.cancel();
+      
+      stopRandomizing();
+      database.ref('lotoHistory').remove();
+      database.ref('lotoResult').remove();
+      database.ref('winners').remove();
+      document.getElementById("result").innerText = "Chưa có số";
+      document.getElementById("countdown").innerText = "";
+      document.getElementById("winnerContainer").innerHTML = "";
+    }
+
+    // Hàm lưu thiết lập thời gian: cập nhật Firebase (node 'timeSetting')
+    function saveTimeSetting() {
+      const timeVal = parseInt(document.getElementById("timeInput").value);
+      if (!isNaN(timeVal) && timeVal > 0) {
+        database.ref('timeSetting').set({ value: timeVal });
+      }
+    }
+
+    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (Google, nếu có) ---
+    function getDefaultMaleVoice() {
+      let voices = speechSynthesis.getVoices();
+      // Lọc ra các giọng có lang bằng "vi-vn" (chuyển về chữ thường)
+      let viVoices = voices.filter(v => v.lang.toLowerCase() === "vi-vn");
+      // Ưu tiên chọn giọng có chứa "google" và ("nam" hoặc "male")
+      for (let voice of viVoices) {
+        let lowerName = voice.name.toLowerCase();
+        if (lowerName.includes("google") && (lowerName.includes("nam") || lowerName.includes("male"))) {
+          return voice;
+        }
+      }
+      // Nếu không, ưu tiên chọn giọng có từ "nam" hoặc "male"
+      for (let voice of viVoices) {
+        let lowerName = voice.name.toLowerCase();
+        if (lowerName.includes("nam") || lowerName.includes("male")) {
+          return voice;
+        }
+      }
+      return viVoices[0] || null;
+    }
+
+    // Hàm tắt/bật tiếng: sử dụng nút với icon loa
+    function toggleMute() {
+      isMuted = !isMuted;
+      let muteBtn = document.getElementById("muteBtn");
+      muteBtn.innerText = isMuted ? "🔊" : "🔇";
+    }
+
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng luôn giọng nam tiếng Việt
+    function speakNumber(number) {
+      if ('speechSynthesis' in window && !isMuted) {
+        let voice = getDefaultMaleVoice();
+        let utterance = new SpeechSynthesisUtterance("Số " + number);
+        // Ép ngôn ngữ là tiếng Việt
+        utterance.lang = "vi-VN";
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        if (voice) {
+          utterance.voice = voice;
+        }
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // --- Modal nhập tên ---
+    function showNameModal() {
+      document.getElementById("nameModal").style.display = "block";
+    }
+
+    function savePlayerNameModal() {
+      const name = document.getElementById("modalPlayerName").value.trim();
+      if (name !== "") {
+        localStorage.setItem("playerName", name);
+        localStorage.setItem("playerNameTimestamp", Date.now().toString());
+        // Thêm tên vào Firebase tại node 'players' và thiết lập onDisconnect để xóa khi thoát
+        let playerRef = database.ref('players').push({ name: name, timestamp: Date.now() });
+        playerRef.onDisconnect().remove();
+        document.getElementById("nameModal").style.display = "none";
+      } else {
+        alert("Vui lòng nhập tên!");
+      }
+    }
+
+    // --- Firebase listeners, TTS & Winner display ---
+    window.onload = function() {
+      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút thì hiển thị modal
+      var storedName = localStorage.getItem("playerName");
+      var storedTimestamp = localStorage.getItem("playerNameTimestamp");
+      if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
+        showNameModal();
+      } else {
+        document.getElementById("nameModal").style.display = "none";
+      }
+
+      // Lắng nghe thay đổi của số hiện tại và đọc số bằng TTS
+      const resultElement = document.getElementById("result");
+      database.ref('lotoResult').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.result !== undefined) {
+          resultElement.innerText = data.result;
+          speakNumber(data.result);
+        } else {
+          resultElement.innerText = "Chưa có số";
+        }
+      });
+
+      // Lắng nghe thay đổi của lịch sử các số đã ra
+      database.ref('lotoHistory').on('value', (snapshot) => {
+        const historyData = snapshot.val();
+        let html = "";
+        if (historyData) {
+          const keys = Object.keys(historyData);
+          keys.sort((a, b) => historyData[a].timestamp - historyData[b].timestamp);
+          keys.forEach((key, index) => {
+            const order = index + 1;
+            const isLatest = (index === keys.length - 1);
+            html += `<div class="history-item">
+                        ${isLatest ? '<div class="new-label">MỚI</div>' : ''}
+                        <div class="drawn-number">${historyData[key].result}</div>
+                        <div class="order-number">${order}</div>
+                     </div>`;
+          });
+        }
+        document.getElementById("history").innerHTML = html;
+      });
+
+      // Lắng nghe thay đổi của danh sách người chơi (loại bỏ tên "toan")
+      database.ref('players').on('value', (snapshot) => {
+        const playersData = snapshot.val();
+        let html = "";
+        if (playersData) {
+          const keys = Object.keys(playersData);
+          keys.sort((a, b) => playersData[a].timestamp - playersData[b].timestamp);
+          keys.forEach((key) => {
+            if (playersData[key].name.toLowerCase() !== "toan") {
+              html += `<li>${playersData[key].name}</li>`;
+            }
+          });
+        }
+        document.getElementById("playerList").innerHTML = html;
+      });
+
+      // Lắng nghe thay đổi của danh sách người chiến thắng (Firebase winners)
+      database.ref('winners').on('value', (snapshot) => {
+        const winnersData = snapshot.val();
+        let html = "";
+        if (winnersData) {
+          const keys = Object.keys(winnersData);
+          keys.sort((a, b) => winnersData[a].timestamp - winnersData[b].timestamp);
+          keys.forEach((key) => {
+            html += `<li>${winnersData[key].name} CHIẾN THẮNG</li>`;
+          });
+        }
+        document.getElementById("winnerContainer").innerHTML = html;
+      });
+
+      // Lắng nghe thay đổi của thiết lập thời gian
+      database.ref('timeSetting').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.value) {
+          document.getElementById("timeInput").value = data.value;
+          countdownTime = data.value;
+        }
+      });
+    }
+  </script>
+</head>
+<body>
+  <!-- Left corner (bottom left): Danh sách người chơi -->
+  <div id="playerListContainer">
+    <h3>Danh sách người chơi</h3>
+    <ul id="playerList"></ul>
+  </div>
+
+  <!-- Right corner (bottom right): Time setting -->
+  <div id="timeSetting">
+    <h3>Thời gian ra số (giây)</h3>
+    <input type="number" id="timeInput" value="4" min="1">
+    <br>
+    <button onclick="saveTimeSetting()">Lưu</button>
+  </div>
+
+  <!-- Center content -->
+  <div class="container">
+    <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
+    <!-- Button container: đặt icon âm thanh bên trái nút "CHƠI VÁN MỚI" -->
+    <div class="button-container">
+      <button id="muteBtn" onclick="toggleMute()">🔇</button>
+      <div class="group-btn">
+        <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
+        <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
+        <!-- "TÔI KINH XẠO TIẾP THÔI" chỉ gọi startRandomizing() -->
+        <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
+      </div>
+      <div class="stop-btn-container">
+        <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
+      </div>
+    </div>
+    <!-- Hiển thị số hiện tại -->
+    <div id="result">Chưa có số</div>
+    <!-- Hiển thị countdown -->
+    <div id="countdown"></div>
+    <!-- Winner container: hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH" -->
+    <div id="winnerContainer"></div>
+    <!-- Lịch sử các số đã ra -->
+    <h2>Các số đã đọc</h2>
+    <div id="history"></div>
+  </div>
+
+  <!-- Modal nhập tên -->
+  <div id="nameModal" class="modal">
+    <div class="modal-content">
+      <h2>Nhập tên của bạn</h2>
+      <input type="text" id="modalPlayerName" placeholder="Nhập tên">
+      <br>
+      <button onclick="savePlayerNameModal()">Lưu tên</button>
+    </div>
+  </div>
+</body>
+</html>
