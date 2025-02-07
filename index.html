@@ -39,7 +39,7 @@
       padding: 5px;
       border-bottom: 1px solid #eee;
     }
-    /* Right corner (bottom right): Time setting & Voice selection */
+    /* Right corner (bottom right): Time setting */
     #timeSetting {
       position: fixed;
       bottom: 10px;
@@ -60,12 +60,6 @@
       width: 60px;
       font-size: 16px;
       padding: 5px;
-    }
-    #timeSetting select {
-      width: 100%;
-      font-size: 14px;
-      padding: 5px;
-      margin: 5px 0;
     }
     #timeSetting button {
       font-size: 14px;
@@ -112,12 +106,7 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Chọn giọng và nút tắt tiếng: đặt bên cạnh nút TÔI KINH */
-    #voiceSelect {
-      font-size: 16px;
-      padding: 5px;
-      margin-left: 10px;
-    }
+    /* Nút tắt tiếng, đặt bên cạnh nút TÔI KINH */
     #muteBtn {
       font-size: 16px;
       padding: 5px 10px;
@@ -255,11 +244,11 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Các biến quản lý quá trình random, countdown và chế độ tiếng
+    // Các biến quản lý quá trình random, countdown và âm thanh
     let randomInterval = null;
     let countdownInterval = null;
     let countdownTime = 4; // mặc định 4 giây
-    let isMuted = false;   // trạng thái âm, ban đầu không tắt tiếng
+    let isMuted = false; // trạng thái âm, ban đầu không tắt
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
@@ -273,7 +262,7 @@
       database.ref('lotoResult').set({ result: number });
       // Thêm số vào lịch sử
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Reset countdown dựa trên giá trị ô thời gian (nếu hợp lệ)
+      // Reset countdown từ giá trị ô thời gian (nếu hợp lệ)
       countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
@@ -330,35 +319,22 @@
       }
     }
 
-    // --- Text-to-Speech & Voice selection ---
-
-    // Hàm hiển thị danh sách giọng nói và chọn mặc định cho tiếng Việt (nam nếu có)
-    function populateVoiceList() {
+    // --- Text-to-Speech: Sử dụng giọng nữ tiếng Việt mặc định ---
+    function getDefaultFemaleVoice() {
       let voices = speechSynthesis.getVoices();
-      let voiceSelect = document.getElementById("voiceSelect");
-      if (!voiceSelect) return;
-      voiceSelect.innerHTML = "";
-      let defaultSet = false;
-      voices.forEach(voice => {
-        if (voice.lang === "vi-VN") {  // Lấy giọng tiếng Việt
-          let option = document.createElement("option");
-          option.textContent = voice.name + " (" + voice.lang + ")";
-          option.value = voice.voiceURI;
-          // Nếu có giọng chứa "Google" (thường là giọng nam), đặt làm mặc định
-          if (!defaultSet && voice.name.toLowerCase().includes("google")) {
-            option.selected = true;
-            defaultSet = true;
-          }
-          voiceSelect.appendChild(option);
+      // Tìm giọng tiếng Việt và ưu tiên giọng có từ "nữ" hoặc "female" (nếu có)
+      for (let voice of voices) {
+        if (voice.lang === "vi-VN" && (voice.name.toLowerCase().includes("nữ") || voice.name.toLowerCase().includes("female"))) {
+          return voice;
         }
-      });
-      // Nếu không có giọng nào chứa "google", chọn giọng đầu tiên có sẵn
-      if (!defaultSet && voiceSelect.options.length > 0) {
-        voiceSelect.options[0].selected = true;
       }
-    }
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = populateVoiceList;
+      // Nếu không tìm thấy, trả về giọng đầu tiên có vi-VN
+      for (let voice of voices) {
+        if (voice.lang === "vi-VN") {
+          return voice;
+        }
+      }
+      return null;
     }
 
     // Hàm tắt/bật tiếng
@@ -368,18 +344,13 @@
       muteBtn.innerText = isMuted ? "BẬT ÂM" : "TẮT ÂM";
     }
 
-    // Hàm đọc số mới bằng text-to-speech nếu không bị tắt tiếng
+    // Hàm đọc số mới bằng TTS nếu không tắt tiếng, sử dụng giọng nữ
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
-        let voices = speechSynthesis.getVoices();
-        let voiceSelect = document.getElementById("voiceSelect");
-        let selectedVoiceId = voiceSelect ? voiceSelect.value : null;
+        let voice = getDefaultFemaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
-        if (selectedVoiceId) {
-          let selectedVoice = voices.find(v => v.voiceURI === selectedVoiceId);
-          if (selectedVoice) {
-            utterance.voice = selectedVoice;
-          }
+        if (voice) {
+          utterance.voice = voice;
         }
         speechSynthesis.speak(utterance);
       }
@@ -406,7 +377,7 @@
 
     // --- Firebase listeners & Text-to-Speech & Winner list ---
     window.onload = function() {
-      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã quá 1 phút thì hiển thị modal
+      // Kiểm tra nếu tên chưa được lưu hoặc đã quá 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
       var storedTimestamp = localStorage.getItem("playerNameTimestamp");
       if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
@@ -447,7 +418,7 @@
         document.getElementById("history").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chơi và loại bỏ tên "toan"
+      // Lắng nghe thay đổi của danh sách người chơi (loại bỏ tên "toan")
       database.ref('players').on('value', (snapshot) => {
         const playersData = snapshot.val();
         let html = "";
@@ -463,16 +434,7 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của thiết lập thời gian
-      database.ref('timeSetting').on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.value) {
-          document.getElementById("timeInput").value = data.value;
-          countdownTime = data.value;
-        }
-      });
-
-      // Lắng nghe danh sách người chiến thắng (winners)
+      // Lắng nghe thay đổi của danh sách người chiến thắng
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
@@ -486,8 +448,14 @@
         document.getElementById("winnerList").innerHTML = html;
       });
 
-      // Gọi hàm để liệt kê giọng nói có sẵn
-      populateVoiceList();
+      // Lắng nghe thay đổi của thiết lập thời gian
+      database.ref('timeSetting').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.value) {
+          document.getElementById("timeInput").value = data.value;
+          countdownTime = data.value;
+        }
+      });
     }
   </script>
 </head>
@@ -498,7 +466,7 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting & Voice selection -->
+  <!-- Right corner (bottom right): Time setting (giờ và nút tắt tiếng) -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
@@ -518,8 +486,6 @@
       </div>
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <!-- Voice select and mute toggle placed next to TÔI KINH -->
-        <select id="voiceSelect"></select>
         <button id="muteBtn" onclick="toggleMute()">TẮT ÂM</button>
       </div>
     </div>
