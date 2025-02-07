@@ -76,7 +76,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: nhóm các nút game và nút TÔI KINH riêng */
+    /* Button container: nhóm các nút game và nút TÔI KINH cùng menu giọng & nút tắt âm */
     .button-container {
       display: flex;
       justify-content: center;
@@ -106,7 +106,12 @@
       font-size: 22px;
       padding: 15px 25px;
     }
-    /* Nút tắt/bật âm: đặt bên cạnh nút TÔI KINH */
+    /* Menu lựa chọn giọng & nút tắt/bật âm: đặt ngay bên cạnh nút TÔI KINH */
+    #voiceMenu {
+      font-size: 16px;
+      padding: 5px;
+      margin-left: 10px;
+    }
     #muteBtn {
       font-size: 20px;
       padding: 5px 10px;
@@ -119,12 +124,6 @@
     }
     #muteBtn:hover {
       background-color: #0056b3;
-    }
-    /* Menu lựa chọn giọng: chỉ hiển thị 2 option: Giọng Nữ và Giọng Nam */
-    #voiceMenu {
-      font-size: 16px;
-      padding: 5px;
-      margin-left: 10px;
     }
     #result {
       margin-top: 30px;
@@ -294,7 +293,7 @@
       }
       document.getElementById("countdown").innerText = "";
       
-      // Hiển thị thông điệp chiến thắng
+      // Hiển thị thông điệp chiến thắng với tên user
       let playerName = localStorage.getItem("playerName") || "Ẩn danh";
       document.getElementById("winnerContainer").innerHTML = `<h2>${playerName} CHIẾN THẮNG</h2>`;
     }
@@ -304,6 +303,7 @@
       stopRandomizing();
       database.ref('lotoHistory').remove();
       database.ref('lotoResult').remove();
+      database.ref('winners').remove();
       document.getElementById("result").innerText = "Chưa có số";
       document.getElementById("countdown").innerText = "";
       document.getElementById("winnerContainer").innerHTML = "";
@@ -321,43 +321,44 @@
     function getDefaultFemaleVoice() {
       let voices = speechSynthesis.getVoices();
       let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Tìm giọng có từ "female" hoặc "nữ" trong tên
+      // Ưu tiên chọn giọng có từ "nữ" hoặc "female"
       for (let voice of viVoices) {
-        if (voice.name.toLowerCase().includes("female") || voice.name.toLowerCase().includes("nữ")) {
+        if (voice.name.toLowerCase().includes("nữ") || voice.name.toLowerCase().includes("female")) {
           return voice;
         }
       }
-      // Nếu không tìm thấy, trả về giọng đầu tiên
       return viVoices[0] || null;
     }
 
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
       let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Tìm giọng có từ "male" hoặc "nam" trong tên
+      // Ưu tiên chọn giọng có từ "nam" hoặc "male"
       for (let voice of viVoices) {
-        if (voice.name.toLowerCase().includes("male") || voice.name.toLowerCase().includes("nam")) {
+        if (voice.name.toLowerCase().includes("nam") || voice.name.toLowerCase().includes("male")) {
           return voice;
         }
       }
-      // Nếu không tìm thấy, trả về giọng đầu tiên
       return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng, sử dụng nút có icon loa và menu lựa chọn giọng
+    // Hàm tắt/bật tiếng: sử dụng nút với icon và menu lựa chọn giọng (Giọng Nữ, Giọng Nam)
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng dựa trên lựa chọn trong menu
+    // Hàm đọc số mới bằng TTS nếu không bị tắt tiếng, sử dụng giọng dựa trên lựa chọn trong menu
     // Menu "voiceMenu" có 2 giá trị: "female" và "male", mặc định là "female"
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voiceChoice = document.getElementById("voiceMenu").value; // "female" hoặc "male"
         let voice = (voiceChoice === "male") ? getDefaultMaleVoice() : getDefaultFemaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
+        // Thiết lập tốc độ và cao độ (rate và pitch) nếu cần
+        utterance.rate = 1;
+        utterance.pitch = 1;
         if (voice) {
           utterance.voice = voice;
         }
@@ -443,6 +444,21 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
+      // Lắng nghe thay đổi của danh sách người chiến thắng
+      // Tên chiến thắng chỉ hiển thị khi người dùng bấm "TÔI KINH"
+      database.ref('winners').on('value', (snapshot) => {
+        const winnersData = snapshot.val();
+        let html = "";
+        if (winnersData) {
+          const keys = Object.keys(winnersData);
+          keys.sort((a, b) => winnersData[a].timestamp - winnersData[b].timestamp);
+          keys.forEach((key) => {
+            html += `<li>${winnersData[key].name} CHIẾN THẮNG</li>`;
+          });
+        }
+        document.getElementById("winnerContainer").innerHTML = html;
+      });
+
       // Lắng nghe thay đổi của thiết lập thời gian
       database.ref('timeSetting').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -451,6 +467,9 @@
           countdownTime = data.value;
         }
       });
+      
+      // Gọi hàm để liệt kê giọng nếu có (nếu có sự thay đổi giọng, trình duyệt sẽ tự cập nhật)
+      // Không cần hiển thị box giọng vì ta dùng menu "voiceMenu" đã có trong UI.
     }
   </script>
 </head>
@@ -461,7 +480,7 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting & Voice menu & Mute button -->
+  <!-- Right corner (bottom right): Time setting, menu lựa chọn giọng & nút tắt tiếng -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
@@ -487,14 +506,14 @@
       </div>
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <!-- Nút tắt/bật âm và menu lựa chọn giọng đã được đặt bên cạnh -->
+        <!-- Menu lựa chọn giọng và nút tắt tiếng được đặt bên cạnh nút "TÔI KINH" -->
       </div>
     </div>
     <!-- Hiển thị số hiện tại -->
     <div id="result">Chưa có số</div>
     <!-- Hiển thị countdown -->
     <div id="countdown"></div>
-    <!-- Winner container: hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH" -->
+    <!-- Winner container: hiển thị tên user chiến thắng khi bấm "TÔI KINH" -->
     <div id="winnerContainer"></div>
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
