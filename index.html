@@ -84,12 +84,10 @@
       gap: 20px;
       margin-top: 20px;
     }
-    /* Ví dụ đặt icon âm thanh bên trái nút "CHƠI VÁN MỚI" */
+    /* Ví dụ: icon âm thanh được đặt bên trái nút "CHƠI VÁN MỚI" trong container này */
     .button-container > button#muteBtn {
-      font-size: 32px;
+      font-size: 32px;  /* Kích thước lớn */
       padding: 10px 20px;
-      /* Nếu muốn định vị cố định theo tọa độ, bạn có thể sử dụng position: absolute; 
-         tuy nhiên, ở đây ta giữ layout linh hoạt */
     }
     /* Main control buttons */
     button.main-btn {
@@ -247,7 +245,7 @@
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số (chỉ khi người dùng nhấn nút "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
+    // Hàm bắt đầu random số (chỉ khi người dùng nhấn "BẮT ĐẦU" hoặc "TÔI KINH XẠO TIẾP THÔI")
     function startRandomizing() {
       if (!randomInterval) {
         updateRandomNumber(); // cập nhật ngay lập tức
@@ -301,10 +299,10 @@
       }
     }
 
-    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (Google, nếu có) ---
+    // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (chỉ tiếng Việt) ---
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
-      let viVoices = voices.filter(v => v.lang === "vi-VN");
+      let viVoices = voices.filter(v => v.lang.toLowerCase() === "vi-vn");
       // Ưu tiên chọn giọng có chứa "google" và ("nam" hoặc "male")
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
@@ -322,11 +320,10 @@
       return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng: sử dụng nút với icon loa
+    // Hàm tắt/bật tiếng: sử dụng nút có icon loa
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
-      // Nếu bị tắt tiếng, hiển thị icon "🔊", nếu không hiển thị "🔇"
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
@@ -424,7 +421,7 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chiến thắng (nếu có, nhưng chỉ hiển thị khi bấm "TÔI KINH")
+      // Lắng nghe thay đổi của danh sách người chiến thắng (Firebase winners, nếu có)
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
