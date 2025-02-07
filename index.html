@@ -76,7 +76,8 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: chứa tất cả các nút điều khiển */
+    /* Button container: chứa tất cả các nút điều khiển.
+       Icon tắt/bật âm sẽ được đặt bên trái nút “CHƠI VÁN MỚI”. */
     .button-container {
       display: flex;
       justify-content: center;
@@ -84,9 +85,9 @@
       gap: 20px;
       margin-top: 20px;
     }
-    /* Đặt icon tắt/bật âm bên trái nút "CHƠI VÁN MỚI" */
+    /* Icon tắt/bật âm: được đặt bên trái container các nút */
     .button-container > button#muteBtn {
-      font-size: 32px;  /* Kích thước lớn */
+      font-size: 32px;
       padding: 10px 20px;
     }
     /* Main control buttons */
@@ -163,7 +164,7 @@
     }
     /* Modal styles cho nhập tên */
     .modal {
-      display: block; /* Hiển thị modal khi cần */
+      display: block;
       position: fixed;
       z-index: 1000;
       left: 0;
@@ -222,10 +223,8 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Biến lưu trữ các số đã được random (dựa vào lịch sử Firebase)
+    // Biến usedNumbers lưu các số đã xuất hiện (dựa trên lịch sử Firebase)
     let usedNumbers = [];
-
-    // Cập nhật usedNumbers từ Firebase trong listener của node 'lotoHistory'
     database.ref('lotoHistory').on('value', (snapshot) => {
       const historyData = snapshot.val();
       usedNumbers = [];
@@ -250,23 +249,18 @@
       document.getElementById("history").innerHTML = html;
     });
 
-    // Hàm sinh số ngẫu nhiên từ 1 đến 90 không trùng
+    // Hàm cập nhật số mới không trùng: chọn ngẫu nhiên từ 1 đến 90 dựa trên các số chưa xuất hiện
     function updateRandomNumber() {
-      // Tạo mảng các số từ 1 đến 90
       const allNumbers = Array.from({length: 90}, (_, i) => i + 1);
-      // Lọc ra các số chưa được sử dụng
       const available = allNumbers.filter(num => usedNumbers.indexOf(num) === -1);
       if (available.length === 0) {
         alert("Đã ra hết số!");
         return;
       }
-      // Chọn ngẫu nhiên một số từ các số còn lại
       const randomIndex = Math.floor(Math.random() * available.length);
       const number = available[randomIndex];
-      // Cập nhật số vào Firebase
       database.ref('lotoResult').set({ result: number });
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Reset countdown từ ô thời gian
       countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
@@ -274,7 +268,7 @@
     // Hàm bắt đầu random số
     function startRandomizing() {
       if (!randomInterval) {
-        updateRandomNumber(); // cập nhật ngay lập tức
+        updateRandomNumber();
         const intervalTime = (parseInt(document.getElementById("timeInput").value) || 4) * 1000;
         randomInterval = setInterval(updateRandomNumber, intervalTime);
         if (!countdownInterval) {
@@ -288,7 +282,7 @@
     }
 
     // Hàm dừng random số và countdown
-    // Khi bấm "TÔI KINH", cập nhật Firebase winners để mọi user đều thấy
+    // Khi người dùng bấm "TÔI KINH", cập nhật Firebase winners để mọi user đều thấy thông điệp chiến thắng
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -300,11 +294,10 @@
       }
       document.getElementById("countdown").innerText = "";
       let playerName = localStorage.getItem("playerName") || "Ẩn danh";
-      // Cập nhật Firebase winners để mọi client khác biết
       database.ref('winners').push({ name: playerName, timestamp: Date.now() });
     }
 
-    // Hàm reset trò chơi: hủy TTS, dừng random, xóa số, lịch sử và winners
+    // Hàm reset trò chơi: hủy bỏ TTS, dừng random, xóa lịch sử và winners
     function newGame() {
       speechSynthesis.cancel();
       stopRandomizing();
@@ -327,16 +320,13 @@
     // --- Text-to-Speech: Sử dụng giọng nam tiếng Việt mặc định (chỉ tiếng Việt) ---
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
-      // Lọc các giọng có lang phải là "vi-vn" (chuyển về chữ thường)
       let viVoices = voices.filter(v => v.lang.toLowerCase() === "vi-vn");
-      // Ưu tiên giọng có chứa "google" và ("nam" hoặc "male")
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
         if (lowerName.includes("google") && (lowerName.includes("nam") || lowerName.includes("male"))) {
           return voice;
         }
       }
-      // Nếu không, ưu tiên giọng có từ "nam" hoặc "male"
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
         if (lowerName.includes("nam") || lowerName.includes("male")) {
@@ -353,7 +343,7 @@
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng nam tiếng Việt
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, đảm bảo đọc bằng tiếng Việt
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voice = getDefaultMaleVoice();
@@ -372,7 +362,6 @@
     function showNameModal() {
       document.getElementById("nameModal").style.display = "block";
     }
-
     function savePlayerNameModal() {
       const name = document.getElementById("modalPlayerName").value.trim();
       if (name !== "") {
@@ -396,7 +385,7 @@
         document.getElementById("nameModal").style.display = "none";
       }
       
-      // Lắng nghe số hiện tại và đọc số bằng TTS
+      // Lắng nghe số hiện tại và đọc bằng TTS
       const resultElement = document.getElementById("result");
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -408,9 +397,7 @@
         }
       });
       
-      // Lắng nghe lịch sử các số đã ra đã được cập nhật qua listener ở trên (và cập nhật usedNumbers)
-      
-      // Lắng nghe danh sách người chơi (loại bỏ tên "toan")
+      // Lắng nghe danh sách người chơi
       database.ref('players').on('value', (snapshot) => {
         const playersData = snapshot.val();
         let html = "";
@@ -426,7 +413,7 @@
         document.getElementById("playerList").innerHTML = html;
       });
       
-      // Lắng nghe danh sách người chiến thắng (Firebase winners)
+      // Lắng nghe danh sách người chiến thắng (tất cả các user sẽ thấy khi có cập nhật winners)
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
@@ -440,7 +427,7 @@
         document.getElementById("winnerContainer").innerHTML = html;
       });
       
-      // Lắng nghe thiết lập thời gian
+      // Lắng nghe thay đổi thiết lập thời gian
       database.ref('timeSetting').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.value) {
@@ -469,7 +456,7 @@
   <!-- Center content -->
   <div class="container">
     <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
-    <!-- Button container: icon âm thanh được đặt bên trái nút "CHƠI VÁN MỚI" -->
+    <!-- Button container: icon âm thanh nằm bên trái nút "CHƠI VÁN MỚI" -->
     <div class="button-container">
       <button id="muteBtn" onclick="toggleMute()">🔇</button>
       <div class="group-btn">
