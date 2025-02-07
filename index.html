@@ -76,7 +76,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: nhóm các nút game và nút TÔI KINH, cùng menu giọng & nút tắt tiếng */
+    /* Button container: nhóm các nút game và nút TÔI KINH cùng menu giọng & nút tắt âm */
     .button-container {
       display: flex;
       justify-content: center;
@@ -317,24 +317,25 @@
       }
     }
 
-    // --- Text-to-Speech: Sử dụng giọng nữ hoặc nam dựa trên lựa chọn trong menu ---
+    // --- Text-to-Speech: Sử dụng giọng nữ tiếng Việt (Google, nếu có) hoặc giọng nam nếu được chọn ---
     function getDefaultFemaleVoice() {
       let voices = speechSynthesis.getVoices();
       let viVoices = voices.filter(v => v.lang === "vi-VN");
-      // Ưu tiên chọn giọng có từ "nữ" hoặc "female"
+      // Ưu tiên chọn giọng có chứa "google" và từ "nữ" hoặc "female"
+      for (let voice of viVoices) {
+        let lowerName = voice.name.toLowerCase();
+        if (lowerName.includes("google") && (lowerName.includes("nữ") || lowerName.includes("female"))) {
+          return voice;
+        }
+      }
+      // Nếu không có, ưu tiên chọn giọng có từ "nữ" hoặc "female"
       for (let voice of viVoices) {
         let lowerName = voice.name.toLowerCase();
         if (lowerName.includes("nữ") || lowerName.includes("female")) {
           return voice;
         }
       }
-      // Nếu không tìm thấy, kiểm tra xem có giọng nào không chứa "male"
-      for (let voice of viVoices) {
-        let lowerName = voice.name.toLowerCase();
-        if (!lowerName.includes("male")) {
-          return voice;
-        }
-      }
+      // Nếu không tìm thấy gì, trả về giọng đầu tiên
       return viVoices[0] || null;
     }
 
@@ -351,21 +352,19 @@
       return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng: sử dụng nút và menu lựa chọn giọng
+    // Hàm tắt/bật tiếng: sử dụng nút có icon loa và menu lựa chọn giọng
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng theo lựa chọn
-    // Menu "voiceMenu" có 2 giá trị: "female" và "male", mặc định là "female"
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng dựa trên lựa chọn trong menu "voiceMenu"
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voiceChoice = document.getElementById("voiceMenu").value; // "female" hoặc "male"
         let voice = (voiceChoice === "male") ? getDefaultMaleVoice() : getDefaultFemaleVoice();
         let utterance = new SpeechSynthesisUtterance("Số " + number);
-        // Bạn có thể điều chỉnh tốc độ (rate) và cao độ (pitch) nếu cần
         utterance.rate = 1;
         utterance.pitch = 1;
         if (voice) {
@@ -394,9 +393,9 @@
       }
     }
 
-    // --- Firebase listeners & TTS & Winner display ---
+    // --- Firebase listeners, TTS & Winner display ---
     window.onload = function() {
-      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút, thì hiển thị modal
+      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
       var storedTimestamp = localStorage.getItem("playerNameTimestamp");
       if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
@@ -454,7 +453,7 @@
       });
 
       // Lắng nghe thay đổi của danh sách người chiến thắng
-      // Tên chiến thắng chỉ hiển thị khi người dùng bấm "TÔI KINH"
+      // Chỉ hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH"
       database.ref('winners').on('value', (snapshot) => {
         const winnersData = snapshot.val();
         let html = "";
@@ -486,12 +485,18 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting -->
+  <!-- Right corner (bottom right): Time setting, menu giọng & nút tắt tiếng -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
     <br>
     <button onclick="saveTimeSetting()">Lưu</button>
+    <br><br>
+    <select id="voiceMenu">
+      <option value="female" selected>Giọng Nữ</option>
+      <option value="male">Giọng Nam</option>
+    </select>
+    <button id="muteBtn" onclick="toggleMute()">🔇</button>
   </div>
 
   <!-- Center content -->
@@ -506,18 +511,13 @@
       </div>
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <select id="voiceMenu">
-          <option value="female" selected>Giọng Nữ</option>
-          <option value="male">Giọng Nam</option>
-        </select>
-        <button id="muteBtn" onclick="toggleMute()">🔇</button>
       </div>
     </div>
     <!-- Hiển thị số hiện tại -->
     <div id="result">Chưa có số</div>
     <!-- Hiển thị countdown -->
     <div id="countdown"></div>
-    <!-- Winner container: hiển thị tên user chiến thắng khi bấm "TÔI KINH" -->
+    <!-- Winner container: hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH" -->
     <div id="winnerContainer"></div>
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
