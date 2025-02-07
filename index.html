@@ -39,16 +39,17 @@
       padding: 5px;
       border-bottom: 1px solid #eee;
     }
-    /* Right corner (bottom right): Time setting */
+    /* Right corner (bottom right): Time setting + voice & mute controls */
     #timeSetting {
       position: fixed;
       bottom: 10px;
       right: 10px;
-      width: 200px;
+      width: 220px;
       background-color: #fff;
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      text-align: center;
     }
     #timeSetting h3 {
       margin: 0 0 10px 0;
@@ -59,6 +60,12 @@
       width: 60px;
       font-size: 16px;
       padding: 5px;
+    }
+    #timeSetting select {
+      width: 100%;
+      font-size: 14px;
+      padding: 5px;
+      margin: 5px 0;
     }
     #timeSetting button {
       font-size: 14px;
@@ -213,10 +220,11 @@
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
 
-    // Các biến quản lý quá trình random và countdown
+    // Biến quản lý random, countdown và chế độ tiếng
     let randomInterval = null;
     let countdownInterval = null;
     let countdownTime = 4; // mặc định 4 giây
+    let isMuted = false;  // ban đầu không tắt tiếng
 
     // Hàm sinh số ngẫu nhiên từ 1 đến 90
     function generateRandomNumber() {
@@ -226,16 +234,16 @@
     // Hàm cập nhật số mới: cập nhật số hiện tại, thêm vào lịch sử, reset countdown
     function updateRandomNumber() {
       const number = generateRandomNumber();
-      // Cập nhật số hiện tại
+      // Cập nhật số hiện tại vào Firebase
       database.ref('lotoResult').set({ result: number });
       // Thêm số vào lịch sử
       database.ref('lotoHistory').push({ result: number, timestamp: Date.now() });
-      // Lấy thời gian countdown từ ô thời gian (nếu hợp lệ)
+      // Reset countdown dựa trên giá trị ô thời gian (nếu hợp lệ)
       countdownTime = parseInt(document.getElementById("timeInput").value) || 4;
       document.getElementById("countdown").innerText = "Chuẩn bị ra số mới: " + countdownTime + " giây";
     }
 
-    // Hàm bắt đầu random số (chỉ chạy khi người dùng nhấn nút)
+    // Hàm bắt đầu random số (chỉ khi người dùng nhấn nút)
     function startRandomizing() {
       if (!randomInterval) {
         updateRandomNumber(); // cập nhật ngay lập tức
@@ -282,19 +290,62 @@
       }
     }
 
-    // Hàm hiển thị modal nhập tên
+    // --- Text-to-Speech functions ---
+
+    // Hàm hiển thị danh sách giọng nói có sẵn và cho phép chọn
+    function populateVoiceList() {
+      let voices = speechSynthesis.getVoices();
+      let voiceSelect = document.getElementById("voiceSelect");
+      if (!voiceSelect) return;
+      voiceSelect.innerHTML = "";
+      voices.forEach(voice => {
+        let option = document.createElement("option");
+        option.textContent = voice.name + " (" + voice.lang + ")";
+        option.value = voice.voiceURI;
+        voiceSelect.appendChild(option);
+      });
+    }
+
+    // Nếu onvoiceschanged có sẵn, thì lắng nghe sự kiện này để cập nhật danh sách giọng nói
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
+
+    // Hàm tắt/bật tiếng
+    function toggleMute() {
+      isMuted = !isMuted;
+      let muteBtn = document.getElementById("muteBtn");
+      muteBtn.innerText = isMuted ? "Bật tiếng" : "Tắt tiếng";
+    }
+
+    // Hàm đọc số mới bằng text-to-speech nếu không bị tắt tiếng
+    function speakNumber(number) {
+      if ('speechSynthesis' in window && !isMuted) {
+        let voices = speechSynthesis.getVoices();
+        let voiceSelect = document.getElementById("voiceSelect");
+        let selectedVoiceId = voiceSelect ? voiceSelect.value : null;
+        let utterance = new SpeechSynthesisUtterance("Số " + number);
+        if (selectedVoiceId) {
+          let selectedVoice = voices.find(v => v.voiceURI === selectedVoiceId);
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+          }
+        }
+        speechSynthesis.speak(utterance);
+      }
+    }
+
+    // --- Modal nhập tên ---
     function showNameModal() {
       document.getElementById("nameModal").style.display = "block";
     }
 
-    // Hàm lưu tên từ modal và ẩn modal  
-    // Lưu tên cùng với timestamp vào localStorage để kiểm tra thời gian lưu (1 phút)
     function savePlayerNameModal() {
       const name = document.getElementById("modalPlayerName").value.trim();
       if (name !== "") {
         localStorage.setItem("playerName", name);
         localStorage.setItem("playerNameTimestamp", Date.now().toString());
-        // Thêm tên vào firebase tại node 'players' và thiết lập onDisconnect để xóa khi thoát
+        // Thêm tên vào Firebase tại node 'players' và thiết lập onDisconnect để xóa khi thoát
         let playerRef = database.ref('players').push({ name: name, timestamp: Date.now() });
         playerRef.onDisconnect().remove();
         document.getElementById("nameModal").style.display = "none";
@@ -303,15 +354,7 @@
       }
     }
 
-    // Firebase listener cho text-to-speech khi số mới xuất hiện
-    function speakNumber(number) {
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance("Số " + number);
-        speechSynthesis.speak(utterance);
-      }
-    }
-
-    // Firebase listeners và kiểm tra tên người dùng khi web mở
+    // Firebase listeners và kiểm tra tên khi web mở
     window.onload = function() {
       // Kiểm tra nếu tên người dùng đã lưu nhưng nếu đã qua 1 phút thì yêu cầu nhập lại
       var storedName = localStorage.getItem("playerName");
@@ -322,13 +365,13 @@
         document.getElementById("nameModal").style.display = "none";
       }
 
-      // Lắng nghe thay đổi của số hiện tại
+      // Lắng nghe thay đổi của số hiện tại và đọc số bằng TTS
       const resultElement = document.getElementById("result");
       database.ref('lotoResult').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.result !== undefined) {
           resultElement.innerText = data.result;
-          speakNumber(data.result);  // Đọc số mới bằng text-to-speech
+          speakNumber(data.result);
         } else {
           resultElement.innerText = "Chưa có số";
         }
@@ -378,6 +421,10 @@
           countdownTime = data.value;
         }
       });
+
+      // Thiết lập lắng nghe chat nếu cần (bỏ nếu không dùng)
+      // populateVoiceList sẽ được gọi sau khi onvoiceschanged xảy ra
+      populateVoiceList();
     }
   </script>
 </head>
@@ -388,12 +435,16 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting -->
+  <!-- Right corner (bottom right): Time setting + Voice select + Mute button -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
     <br>
     <button onclick="saveTimeSetting()">Lưu</button>
+    <br><br>
+    <select id="voiceSelect"></select>
+    <br>
+    <button id="muteBtn" onclick="toggleMute()">Tắt tiếng</button>
   </div>
 
   <!-- Center content -->
