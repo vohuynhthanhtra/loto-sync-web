@@ -11,17 +11,17 @@
       padding: 0;
       background-color: #f7f7f7;
     }
-    /* Left corner: Danh sách người chơi */
+    /* Left corner (bottom left): Danh sách người chơi */
     #playerListContainer {
       position: fixed;
-      top: 10px;
+      bottom: 10px;
       left: 10px;
       width: 220px;
       background-color: #fff;
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      max-height: 90vh;
+      max-height: 40vh;
       overflow-y: auto;
     }
     #playerListContainer h3 {
@@ -39,7 +39,7 @@
       padding: 5px;
       border-bottom: 1px solid #eee;
     }
-    /* Right corner (bottom right now): Time setting */
+    /* Right corner (bottom right): Time setting */
     #timeSetting {
       position: fixed;
       bottom: 10px;
@@ -303,6 +303,14 @@
       }
     }
 
+    // Firebase listener cho text-to-speech khi số mới xuất hiện
+    function speakNumber(number) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance("Số " + number);
+        speechSynthesis.speak(utterance);
+      }
+    }
+
     // Firebase listeners và kiểm tra tên người dùng khi web mở
     window.onload = function() {
       // Kiểm tra nếu tên người dùng đã lưu nhưng nếu đã qua 1 phút thì yêu cầu nhập lại
@@ -320,6 +328,7 @@
         const data = snapshot.val();
         if (data && data.result !== undefined) {
           resultElement.innerText = data.result;
+          speakNumber(data.result);  // Đọc số mới bằng text-to-speech
         } else {
           resultElement.innerText = "Chưa có số";
         }
@@ -373,7 +382,7 @@
   </script>
 </head>
 <body>
-  <!-- Left corner: Danh sách người chơi -->
+  <!-- Left corner (bottom left): Danh sách người chơi -->
   <div id="playerListContainer">
     <h3>Danh sách người chơi</h3>
     <ul id="playerList"></ul>
