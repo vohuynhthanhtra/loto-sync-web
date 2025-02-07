@@ -133,6 +133,18 @@
       document.getElementById("countdown").innerText = "";
     }
 
+    // Hàm reset trò chơi (CHƠI VÁN MỚI)
+    function newGame() {
+      // Dừng quá trình random và countdown nếu đang chạy
+      stopRandomizing();
+      // Xóa dữ liệu lịch sử và số hiện tại trên Firebase
+      database.ref('lotoHistory').remove();
+      database.ref('lotoResult').remove();
+      // Reset hiển thị giao diện
+      document.getElementById("result").innerText = "Chưa có số";
+      document.getElementById("countdown").innerText = "";
+    }
+
     // Khi trang được tải, thiết lập lắng nghe các thay đổi từ Firebase
     window.onload = function() {
       const resultElement = document.getElementById("result");
@@ -166,6 +178,7 @@
 <body>
   <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
   <!-- Các nút điều khiển -->
+  <button onclick="newGame()">CHƠI VÁN MỚI</button>
   <button onclick="startRandomizing()">BẮT ĐẦU</button>
   <button onclick="stopRandomizing()">TÔI KINH</button>
   <button onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
@@ -173,7 +186,7 @@
   <div id="result">Chưa có số</div>
   <!-- Hiển thị bộ đếm thời gian -->
   <div id="countdown"></div>
-  <!-- Hiển thị lịch sử các số đã ra (5 số mỗi dòng nhờ CSS Grid) -->
+  <!-- Lịch sử các số đã ra (hiển thị 5 số mỗi dòng nhờ CSS Grid) -->
   <h2>Các số đã đọc</h2>
   <div id="history"></div>
 </body>
