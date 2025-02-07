@@ -120,7 +120,7 @@
     #muteBtn:hover {
       background-color: #0056b3;
     }
-    /* Menu lựa chọn giọng: chỉ có 2 option */
+    /* Menu lựa chọn giọng: chỉ hiển thị 2 option: Giọng Nữ và Giọng Nam */
     #voiceMenu {
       font-size: 16px;
       padding: 5px;
@@ -137,20 +137,11 @@
       font-size: 24px;
       color: #555;
     }
-    /* Winner container: hiển thị danh sách người chiến thắng */
+    /* Winner container: hiển thị thông điệp chiến thắng */
     #winnerContainer {
       margin-top: 20px;
       text-align: center;
-    }
-    #winnerContainer h2 {
       font-size: 28px;
-      color: #333;
-    }
-    #winnerList {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-size: 20px;
       color: #007bff;
     }
     /* History grid: 10 numbers per row */
@@ -291,7 +282,7 @@
     }
 
     // Hàm dừng quá trình random số và countdown
-    // Khi người dùng bấm "TÔI KINH", thêm tên user vào danh sách người chiến thắng
+    // Khi người dùng bấm "TÔI KINH", hiển thị thông điệp chiến thắng với tên user
     function stopRandomizing() {
       if (randomInterval) {
         clearInterval(randomInterval);
@@ -303,19 +294,19 @@
       }
       document.getElementById("countdown").innerText = "";
       
-      // Thêm tên người dùng vào danh sách người chiến thắng
+      // Hiển thị thông điệp chiến thắng
       let playerName = localStorage.getItem("playerName") || "Ẩn danh";
-      database.ref('winners').push({ name: playerName, timestamp: Date.now() });
+      document.getElementById("winnerContainer").innerHTML = `<h2>${playerName} CHIẾN THẮNG</h2>`;
     }
 
-    // Hàm reset trò chơi: dừng random, xóa số hiện tại, lịch sử và danh sách người chiến thắng
+    // Hàm reset trò chơi: dừng random, xóa số hiện tại, lịch sử và thông điệp chiến thắng
     function newGame() {
       stopRandomizing();
       database.ref('lotoHistory').remove();
       database.ref('lotoResult').remove();
-      database.ref('winners').remove();
       document.getElementById("result").innerText = "Chưa có số";
       document.getElementById("countdown").innerText = "";
+      document.getElementById("winnerContainer").innerHTML = "";
     }
 
     // Hàm lưu thiết lập thời gian: cập nhật Firebase (node 'timeSetting')
@@ -329,42 +320,39 @@
     // --- Text-to-Speech: Sử dụng giọng nữ tiếng Việt mặc định hoặc giọng nam nếu được chọn ---
     function getDefaultFemaleVoice() {
       let voices = speechSynthesis.getVoices();
-      for (let voice of voices) {
-        if (voice.lang === "vi-VN" && voice.name.toLowerCase().includes("nữ")) {
+      let viVoices = voices.filter(v => v.lang === "vi-VN");
+      // Tìm giọng có từ "female" hoặc "nữ" trong tên
+      for (let voice of viVoices) {
+        if (voice.name.toLowerCase().includes("female") || voice.name.toLowerCase().includes("nữ")) {
           return voice;
         }
       }
-      for (let voice of voices) {
-        if (voice.lang === "vi-VN") {
-          return voice;
-        }
-      }
-      return null;
+      // Nếu không tìm thấy, trả về giọng đầu tiên
+      return viVoices[0] || null;
     }
 
     function getDefaultMaleVoice() {
       let voices = speechSynthesis.getVoices();
-      for (let voice of voices) {
-        if (voice.lang === "vi-VN" && (voice.name.toLowerCase().includes("nam") || voice.name.toLowerCase().includes("male"))) {
+      let viVoices = voices.filter(v => v.lang === "vi-VN");
+      // Tìm giọng có từ "male" hoặc "nam" trong tên
+      for (let voice of viVoices) {
+        if (voice.name.toLowerCase().includes("male") || voice.name.toLowerCase().includes("nam")) {
           return voice;
         }
       }
-      for (let voice of voices) {
-        if (voice.lang === "vi-VN") {
-          return voice;
-        }
-      }
-      return null;
+      // Nếu không tìm thấy, trả về giọng đầu tiên
+      return viVoices[0] || null;
     }
 
-    // Hàm tắt/bật tiếng, hiển thị icon loa cùng menu lựa chọn giọng (Giọng Nữ, Giọng Nam)
+    // Hàm tắt/bật tiếng, sử dụng nút có icon loa và menu lựa chọn giọng
     function toggleMute() {
       isMuted = !isMuted;
       let muteBtn = document.getElementById("muteBtn");
       muteBtn.innerText = isMuted ? "🔊" : "🔇";
     }
 
-    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng được chọn (mặc định Giọng Nữ)
+    // Hàm đọc số mới bằng TTS nếu không bị tắt, sử dụng giọng dựa trên lựa chọn trong menu
+    // Menu "voiceMenu" có 2 giá trị: "female" và "male", mặc định là "female"
     function speakNumber(number) {
       if ('speechSynthesis' in window && !isMuted) {
         let voiceChoice = document.getElementById("voiceMenu").value; // "female" hoặc "male"
@@ -396,9 +384,9 @@
       }
     }
 
-    // --- Firebase listeners & TTS & Winner list ---
+    // --- Firebase listeners & TTS & Winner display ---
     window.onload = function() {
-      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút, thì hiển thị modal
+      // Kiểm tra nếu tên người dùng chưa lưu hoặc đã qua 1 phút thì hiển thị modal
       var storedName = localStorage.getItem("playerName");
       var storedTimestamp = localStorage.getItem("playerNameTimestamp");
       if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
@@ -455,20 +443,6 @@
         document.getElementById("playerList").innerHTML = html;
       });
 
-      // Lắng nghe thay đổi của danh sách người chiến thắng
-      database.ref('winners').on('value', (snapshot) => {
-        const winnersData = snapshot.val();
-        let html = "";
-        if (winnersData) {
-          const keys = Object.keys(winnersData);
-          keys.sort((a, b) => winnersData[a].timestamp - winnersData[b].timestamp);
-          keys.forEach((key) => {
-            html += `<li>${winnersData[key].name}</li>`;
-          });
-        }
-        document.getElementById("winnerList").innerHTML = html;
-      });
-
       // Lắng nghe thay đổi của thiết lập thời gian
       database.ref('timeSetting').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -487,12 +461,18 @@
     <ul id="playerList"></ul>
   </div>
 
-  <!-- Right corner (bottom right): Time setting -->
+  <!-- Right corner (bottom right): Time setting & Voice menu & Mute button -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
     <input type="number" id="timeInput" value="4" min="1">
     <br>
     <button onclick="saveTimeSetting()">Lưu</button>
+    <br><br>
+    <select id="voiceMenu">
+      <option value="female" selected>Giọng Nữ</option>
+      <option value="male">Giọng Nam</option>
+    </select>
+    <button id="muteBtn" onclick="toggleMute()">🔇</button>
   </div>
 
   <!-- Center content -->
@@ -507,23 +487,15 @@
       </div>
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
-        <!-- Menu lựa chọn giọng (Giọng Nữ, Giọng Nam) và nút tắt tiếng -->
-        <select id="voiceMenu">
-          <option value="female" selected>Giọng Nữ</option>
-          <option value="male">Giọng Nam</option>
-        </select>
-        <button id="muteBtn" onclick="toggleMute()">🔇</button>
+        <!-- Nút tắt/bật âm và menu lựa chọn giọng đã được đặt bên cạnh -->
       </div>
     </div>
     <!-- Hiển thị số hiện tại -->
     <div id="result">Chưa có số</div>
     <!-- Hiển thị countdown -->
     <div id="countdown"></div>
-    <!-- Winner container: hiển thị danh sách người chiến thắng -->
-    <div id="winnerContainer">
-      <h2>Tên user đã chiến thắng</h2>
-      <ul id="winnerList"></ul>
-    </div>
+    <!-- Winner container: hiển thị thông điệp chiến thắng khi người dùng bấm "TÔI KINH" -->
+    <div id="winnerContainer"></div>
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
     <div id="history"></div>
