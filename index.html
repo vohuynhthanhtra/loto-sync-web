@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</title>
   <style>
+    /* Reset & body */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -39,7 +40,7 @@
     /* Center content */
     .container {
       text-align: center;
-      margin-top: 100px; /* leave space for fixed corner */
+      margin-top: 100px; /* Leave space for fixed elements */
     }
     h1 {
       color: #333;
@@ -107,6 +108,46 @@
       border: 1px solid red;
       border-radius: 3px;
     }
+    /* Modal styles cho nhập tên */
+    .modal {
+      display: none; /* Ẩn mặc định */
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 400px;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .modal-content input {
+      font-size: 18px;
+      padding: 5px;
+      width: 80%;
+      margin-bottom: 10px;
+    }
+    .modal-content button {
+      font-size: 18px;
+      padding: 5px 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+    }
+    .modal-content button:hover {
+      background-color: #0056b3;
+    }
   </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -153,8 +194,7 @@
     // Hàm bắt đầu random số (chỉ chạy khi người dùng nhấn nút)
     function startRandomizing() {
       if (!randomInterval) {
-        updateRandomNumber(); // cập nhật ngay lập tức
-        // Sử dụng giá trị thời gian từ ô timeInput (tính bằng giây)
+        updateRandomNumber(); // Cập nhật ngay lập tức
         const intervalTime = (parseInt(document.getElementById("timeInput").value) || 4) * 1000;
         randomInterval = setInterval(updateRandomNumber, intervalTime);
         // Bắt đầu bộ đếm thời gian
@@ -198,8 +238,27 @@
       }
     }
 
-    // Firebase listeners: không auto-run random số khi trang mở
+    // Hàm hiển thị modal nhập tên khi web mở
+    function showNameModal() {
+      document.getElementById("nameModal").style.display = "block";
+    }
+
+    // Hàm lưu tên từ modal và ẩn modal
+    function savePlayerNameModal() {
+      const name = document.getElementById("modalPlayerName").value.trim();
+      if (name !== "") {
+        // Lưu tên vào localStorage (hoặc có thể lưu vào Firebase nếu cần)
+        localStorage.setItem("playerName", name);
+        document.getElementById("nameModal").style.display = "none";
+      } else {
+        alert("Vui lòng nhập tên!");
+      }
+    }
+
+    // Firebase listeners và hiển thị modal nhập tên khi mở web
     window.onload = function() {
+      // Không tự động chạy số khi web mở
+
       // Lắng nghe thay đổi của số hiện tại
       const resultElement = document.getElementById("result");
       database.ref('lotoResult').on('value', (snapshot) => {
@@ -239,6 +298,11 @@
           countdownTime = data.value;
         }
       });
+
+      // Hiển thị modal nhập tên khi chưa có tên được lưu
+      if (!localStorage.getItem("playerName")) {
+        showNameModal();
+      }
     }
   </script>
 </head>
@@ -266,6 +330,16 @@
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
     <div id="history"></div>
+  </div>
+
+  <!-- Modal nhập tên -->
+  <div id="nameModal" class="modal">
+    <div class="modal-content">
+      <h2>Nhập tên của bạn</h2>
+      <input type="text" id="modalPlayerName" placeholder="Nhập tên">
+      <br>
+      <button onclick="savePlayerNameModal()">Lưu tên</button>
+    </div>
   </div>
 </body>
 </html>
