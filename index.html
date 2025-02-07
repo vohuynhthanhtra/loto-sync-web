@@ -138,7 +138,7 @@
     }
     /* Modal styles cho nhập tên */
     .modal {
-      display: block; /* Hiển thị modal mỗi khi trang mở */
+      display: block; /* Hiển thị modal khi cần */
       position: fixed;
       z-index: 1000;
       left: 0;
@@ -266,19 +266,20 @@
       }
     }
 
-    // Hàm hiển thị modal nhập tên khi web mở (luôn hiển thị)
+    // Hàm hiển thị modal nhập tên
     function showNameModal() {
       document.getElementById("nameModal").style.display = "block";
     }
 
-    // Hàm lưu tên từ modal và ẩn modal  
-    // Sử dụng firebase onDisconnect để xóa tên khi người dùng thoát
+    // Hàm lưu tên từ modal và ẩn modal
+    // Lưu tên cùng với timestamp vào localStorage để kiểm tra thời gian lưu (1 phút)
     function savePlayerNameModal() {
       const name = document.getElementById("modalPlayerName").value.trim();
       if (name !== "") {
-        // Thêm tên vào firebase tại node 'players' và lưu lại key
+        localStorage.setItem("playerName", name);
+        localStorage.setItem("playerNameTimestamp", Date.now().toString());
+        // Thêm tên vào firebase tại node 'players' và thiết lập onDisconnect để xóa khi thoát
         let playerRef = database.ref('players').push({ name: name, timestamp: Date.now() });
-        // Khi người dùng disconnect, xóa bản ghi của họ
         playerRef.onDisconnect().remove();
         document.getElementById("nameModal").style.display = "none";
       } else {
@@ -286,10 +287,16 @@
       }
     }
 
-    // Firebase listeners
+    // Firebase listeners và kiểm tra tên người dùng khi web mở
     window.onload = function() {
-      // Luôn hiển thị modal nhập tên khi mở web
-      showNameModal();
+      // Kiểm tra nếu tên người dùng đã lưu nhưng nếu đã qua 1 phút thì yêu cầu nhập lại
+      var storedName = localStorage.getItem("playerName");
+      var storedTimestamp = localStorage.getItem("playerNameTimestamp");
+      if (!storedName || !storedTimestamp || (Date.now() - parseInt(storedTimestamp)) > 60000) {
+        showNameModal();
+      } else {
+        document.getElementById("nameModal").style.display = "none";
+      }
 
       // Lắng nghe thay đổi của số hiện tại
       const resultElement = document.getElementById("result");
