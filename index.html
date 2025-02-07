@@ -75,7 +75,7 @@
       font-size: 48px;
       margin-bottom: 20px;
     }
-    /* Button container: nhóm các nút và nút TÔI KINH riêng */
+    /* Button container: nhóm các nút game và nút TÔI KINH riêng */
     .button-container {
       display: flex;
       justify-content: center;
@@ -100,7 +100,7 @@
     button.main-btn:hover {
       background-color: #0056b3;
     }
-    /* Nút TÔI KINH lớn hơn và nổi bật (đặt trong stop-btn-container) */
+    /* Nút TÔI KINH lớn hơn và nổi bật */
     #stopBtn {
       font-size: 22px;
       padding: 15px 25px;
@@ -190,6 +190,45 @@
       color: white;
     }
     .modal-content button:hover {
+      background-color: #0056b3;
+    }
+    /* Chat container: hiển thị ở dưới cùng của trang */
+    #chatContainer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background-color: #fff;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #chatMessages {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+      background-color: #f9f9f9;
+    }
+    #chatInputContainer {
+      display: flex;
+    }
+    #chatInput {
+      flex: 1;
+      padding: 8px;
+      font-size: 16px;
+    }
+    #chatInputContainer button {
+      padding: 8px 12px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    #chatInputContainer button:hover {
       background-color: #0056b3;
     }
   </style>
@@ -303,6 +342,40 @@
       }
     }
 
+    // Hàm gửi tin nhắn chat
+    function sendChatMessage() {
+      var message = document.getElementById("chatInput").value.trim();
+      if (message !== "") {
+        var playerName = localStorage.getItem("playerName") || "Ẩn danh";
+        database.ref('chatMessages').push({
+          name: playerName,
+          message: message,
+          timestamp: Date.now()
+        });
+        document.getElementById("chatInput").value = "";
+      }
+    }
+
+    // Firebase listener cho chat messages
+    function setupChatListener() {
+      database.ref('chatMessages').on('value', function(snapshot) {
+        var chatMessagesDiv = document.getElementById("chatMessages");
+        var messages = snapshot.val();
+        var html = "";
+        if (messages) {
+          var keys = Object.keys(messages);
+          keys.sort((a, b) => messages[a].timestamp - messages[b].timestamp);
+          keys.forEach(function(key) {
+            var msgData = messages[key];
+            html += "<div><strong>" + msgData.name + ":</strong> " + msgData.message + "</div>";
+          });
+        }
+        chatMessagesDiv.innerHTML = html;
+        // Cuộn xuống cuối khung chat
+        chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
+      });
+    }
+
     // Firebase listeners và kiểm tra tên người dùng khi web mở
     window.onload = function() {
       // Kiểm tra nếu tên người dùng đã lưu nhưng nếu đã qua 1 phút thì yêu cầu nhập lại
@@ -353,7 +426,6 @@
           const keys = Object.keys(playersData);
           keys.sort((a, b) => playersData[a].timestamp - playersData[b].timestamp);
           keys.forEach((key) => {
-            // Nếu tên không phải "toan" (không phân biệt chữ hoa thường)
             if (playersData[key].name.toLowerCase() !== "toan") {
               html += `<li>${playersData[key].name}</li>`;
             }
@@ -370,6 +442,9 @@
           countdownTime = data.value;
         }
       });
+
+      // Thiết lập lắng nghe chat
+      setupChatListener();
     }
   </script>
 </head>
@@ -391,14 +466,13 @@
   <!-- Center content -->
   <div class="container">
     <h1>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</h1>
-    <!-- Nút nhóm: CHƠI VÁN MỚI, BẮT ĐẦU, TÔI KINH XẠO TIẾP THÔI -->
+    <!-- Button container -->
     <div class="button-container">
       <div class="group-btn">
         <button class="main-btn" onclick="newGame()">CHƠI VÁN MỚI</button>
         <button class="main-btn" onclick="startRandomizing()">BẮT ĐẦU</button>
         <button class="main-btn" onclick="startRandomizing()">TÔI KINH XẠO TIẾP THÔI</button>
       </div>
-      <!-- Nút TÔI KINH riêng, lớn hơn -->
       <div class="stop-btn-container">
         <button class="main-btn" id="stopBtn" onclick="stopRandomizing()">TÔI KINH</button>
       </div>
@@ -410,6 +484,15 @@
     <!-- Lịch sử các số đã ra -->
     <h2>Các số đã đọc</h2>
     <div id="history"></div>
+  </div>
+
+  <!-- Chat container -->
+  <div id="chatContainer">
+    <div id="chatMessages"></div>
+    <div id="chatInputContainer">
+      <input type="text" id="chatInput" placeholder="Nhập tin nhắn...">
+      <button onclick="sendChatMessage()">Gửi</button>
+    </div>
   </div>
 
   <!-- Modal nhập tên -->
