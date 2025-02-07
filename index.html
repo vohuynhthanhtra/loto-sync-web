@@ -4,12 +4,40 @@
   <meta charset="UTF-8">
   <title>BHR LÔTÔ BHR MÃI ĐỈNH LÔTÔ</title>
   <style>
-    /* Reset & body */
+    /* Reset & Body */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f7f7f7;
+    }
+    /* Left corner: Danh sách người chơi */
+    #playerListContainer {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      width: 220px;
+      background-color: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #playerListContainer h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #333;
+    }
+    #playerList {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #playerList li {
+      font-size: 16px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
     }
     /* Right corner: Time setting */
     #timeSetting {
@@ -40,7 +68,7 @@
     /* Center content */
     .container {
       text-align: center;
-      margin-top: 100px; /* Leave space for fixed elements */
+      margin-top: 100px; /* Leave space for fixed corners */
     }
     h1 {
       color: #333;
@@ -110,7 +138,7 @@
     }
     /* Modal styles cho nhập tên */
     .modal {
-      display: none; /* Ẩn mặc định */
+      display: block; /* Hiển thị modal mỗi khi trang mở */
       position: fixed;
       z-index: 1000;
       left: 0;
@@ -194,7 +222,7 @@
     // Hàm bắt đầu random số (chỉ chạy khi người dùng nhấn nút)
     function startRandomizing() {
       if (!randomInterval) {
-        updateRandomNumber(); // Cập nhật ngay lập tức
+        updateRandomNumber(); // cập nhật ngay lập tức
         const intervalTime = (parseInt(document.getElementById("timeInput").value) || 4) * 1000;
         randomInterval = setInterval(updateRandomNumber, intervalTime);
         // Bắt đầu bộ đếm thời gian
@@ -238,26 +266,30 @@
       }
     }
 
-    // Hàm hiển thị modal nhập tên khi web mở
+    // Hàm hiển thị modal nhập tên khi web mở (luôn hiển thị)
     function showNameModal() {
       document.getElementById("nameModal").style.display = "block";
     }
 
-    // Hàm lưu tên từ modal và ẩn modal
+    // Hàm lưu tên từ modal và ẩn modal  
+    // Sử dụng firebase onDisconnect để xóa tên khi người dùng thoát
     function savePlayerNameModal() {
       const name = document.getElementById("modalPlayerName").value.trim();
       if (name !== "") {
-        // Lưu tên vào localStorage (hoặc có thể lưu vào Firebase nếu cần)
-        localStorage.setItem("playerName", name);
+        // Thêm tên vào firebase tại node 'players' và lưu lại key
+        let playerRef = database.ref('players').push({ name: name, timestamp: Date.now() });
+        // Khi người dùng disconnect, xóa bản ghi của họ
+        playerRef.onDisconnect().remove();
         document.getElementById("nameModal").style.display = "none";
       } else {
         alert("Vui lòng nhập tên!");
       }
     }
 
-    // Firebase listeners và hiển thị modal nhập tên khi mở web
+    // Firebase listeners
     window.onload = function() {
-      // Không tự động chạy số khi web mở
+      // Luôn hiển thị modal nhập tên khi mở web
+      showNameModal();
 
       // Lắng nghe thay đổi của số hiện tại
       const resultElement = document.getElementById("result");
@@ -290,7 +322,21 @@
         document.getElementById("history").innerHTML = html;
       });
 
-      // Lắng nghe thiết lập thời gian
+      // Lắng nghe thay đổi của danh sách người chơi
+      database.ref('players').on('value', (snapshot) => {
+        const playersData = snapshot.val();
+        let html = "";
+        if (playersData) {
+          const keys = Object.keys(playersData);
+          keys.sort((a, b) => playersData[a].timestamp - playersData[b].timestamp);
+          keys.forEach((key) => {
+            html += `<li>${playersData[key].name}</li>`;
+          });
+        }
+        document.getElementById("playerList").innerHTML = html;
+      });
+
+      // Lắng nghe thay đổi của thiết lập thời gian
       database.ref('timeSetting').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data && data.value) {
@@ -298,15 +344,16 @@
           countdownTime = data.value;
         }
       });
-
-      // Hiển thị modal nhập tên khi chưa có tên được lưu
-      if (!localStorage.getItem("playerName")) {
-        showNameModal();
-      }
     }
   </script>
 </head>
 <body>
+  <!-- Left corner: Danh sách người chơi -->
+  <div id="playerListContainer">
+    <h3>Danh sách người chơi</h3>
+    <ul id="playerList"></ul>
+  </div>
+
   <!-- Right corner: Time setting -->
   <div id="timeSetting">
     <h3>Thời gian ra số (giây)</h3>
